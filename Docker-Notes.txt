@@ -1,0 +1,3114 @@
+Tutorials:
+https://www.youtube.com/watch?v=zJ6WbK9zFpI
+
+Containers
+---------------
+- containers are completely isolated enviornment, as they can have their own processes, or services their own network, own mounts just like virtual machines except they all share same OS kernel.
+
+OS
+---------------
+- any Operting system is consists of 2 things: 1/ OS kernel (linux (ubuntu/mac) or windows) - deal with underlying hardwares 2/ set of softwares (UI/drivers/file managers etc) - this makes every OS different han eah others.
+- Docker containers share the underlying kernel.
+	- lets say we have system with ubuntu and docker installed on it, Docker can run any flavor of OS on top of it as long as they are all based on same kernel (in this case Lunux kernel), if the underlyig OS is Ubuntu, Docker can run containers based on Debby, fedora, susay, centOS, Each docker container only has the additional softwares (UI/drivers/file managers etc) that makes these different, Docker utilizes the underlying kernel of the Docker host.
+	- we can only run same kernel based container image but not a different based kernel. ex: we wont be able to run a windows based container on a Docker host with Linux on it, fo that we require a Docker on windows host.
+	- when we install Docker on windows and run a linx container, we are not relly running a linux container on windows, instead windows runs a linux container on a linux virtual machine under the hood so it basically, linux container on linux machine.
+	- Is it not a problem of not being able to run another kernel based OS with Docker, NO.... unlike hypervisor, Docker is not meant to virtualize and run different OS and kernels on the same hardware, the main purpose of docker is to package and containerize the applications and run them anywhere anytime as many times as we want.
+
+Containers vs Virtual machines (hypervisor)	
+---------------------------------------------
+Containers
+-----------
+
+Container1(libs,apps), container2 (libs, apps)... etc
+Docker Daemon
+OS
+Hardware Infrastructure
+
+- containers are light weight and usually in MBs in size, allowing docker containers to boot up faster, in a few secs
+- less isolation of hardware resources as more resources are shared between the containers.
+
+
+Virtual machines
+-----------------
+VM1 (OS-LIB/DEPS-(apps..)), VM2 (OS-LIB/DEPS-(apps..))... VM3...
+Hypervisor
+Hardware Infrastructure
+	
+- each VMs has its own OS, then the dependencies (JDK,Python versions..) and then the applications.
+- VMs consumed higher disk space, usually in GBs in size, VMs takes mins to bootup as it needs to bootup the entire OS.
+- VMs have complete isolation from each other, since VMs dont rely on underlying OS or kernel, we can run different type of applications build on different OS based on same hypervisor.
+
+*** But its not like either container or VMs situation, it actually containers and VMs, when we have large envs with thousnds of application containers running on thousand of docker hosts, we will often see containers provisioned on virtual docker hosts that way we can utilize the advantages of both technologies, i.e. benefits of virtualization to easily provision or decommision docker hosts as needed, and make use of benefit of docker to easily provision applications and quickly scale them as required. 
+** remember in this case we will not be provisoning that many VMs as we used to earlier as we provisoned VM for each application, now we may provision VMs for 100s of containers.
+
+
+How it is done?
+- we can run docker image of anytype of softwares available on dockerhub like, DBs, OS etc.
+- can run as many instances of same images to add resiliensy and front faces by some kind of load balance.
+docker run ansible
+docker run mongodb
+docker run redis
+docker run nodejs
+docker run nodejs
+docker run nodejs
+
+
+Conatiner vs image
+------------------------
+- Image is package/template used to create one or more containers.
+- containers are running instances of same image, they are isolated with their own env. of processes, networks.
+
+
+Install Docker
+-----------------------------
+- dockerdesktop for windows or mac
+- google search "docker engine community for ubuntu" - confirm the ubuntu version, cat /etc/*release* - follow the steps mentioned there.
+- sudo docker version
+- test by running a image:
+$ sudo docker run docker/whalesay cowsay Hello-World
+
+
+Docker in Windows
+-----------------------------
+2 options to use Docker on Windows machines:
+
+1/ Docker in Windows using Docker Toolbox (legacy)
+	- was the original support for Docker on windows. we have windows laptop with no access of linux but we want to try docker. So we can install any virtual box software such as 'Oracle virtualbox' or 'VMware workstation' and deploy a linux VM on it such Ubunty or Debby, then install Docker on Ubuntu and play around with it. 
+	- This was the first way, so we could not run windows based docker images or run windows based docker containers, and obviously cant run linux containers directly on windows, and just working on docker on a Linux virtual machine on a windows host.
+	- Docker provided a set of tools to make these easy.. called Docker toolbox. contains Oracle virtualbox, Docker engine, Docker machine, docker compose, Kitematic GUI.. this helps running docker on windows by simply installing Docker toolbox. 
+	- so it installes virtual box and run boot2docker VM which has docker alerady and you are all set.
+	- requirements: 64-bit OS, windows 7 or higher, virtualization enabled
+
+	
+2/ Docker Desktop for Windows
+	- Newer way to install Docker on windows.
+	- earlier option, we had Oracle virtualbox, then a linux VM and then Docker on top of it, with this newer option, Oracle virtula box is taken out and a native virtualization technique indiced called: Microsoft Hyper-V.
+	- during installation od DockerDesktop, it still automatically creates a linux system underneath but this time its created on Microsoft Hyper-V instead of on Oracle virtualbox.
+	
+- Both these options helps to create/run images of lnux based systems only.
+
+- *** when we install dockerdesktop for windows the default option is to work with linux containerts but if we like to use windows containers the we mush explicitly configure docker for window to switch to using windows containers.
+	
+	
+	
+Opne CMD or VS code terminal:
+$ docker info
+
+PS D:\work\learn\docker-kubernetes\docker-compose\docker-compose-training-master\webapp> docker info
+Client:
+ Context:    default
+ Debug Mode: false
+ Plugins:
+  buildx: Build with BuildKit (Docker Inc., v0.6.1-docker)
+  compose: Docker Compose (Docker Inc., v2.0.0-rc.1)      
+  scan: Docker Scan (Docker Inc., v0.8.0)
+
+Server:
+ Containers: 5
+  Running: 2
+  Paused: 0
+  Stopped: 3
+ Images: 5
+ Server Version: 20.10.8
+ Storage Driver: overlay2
+  Backing Filesystem: extfs
+  Supports d_type: true
+  Native Overlay Diff: true
+  userxattr: false
+ Logging Driver: json-file
+ Cgroup Driver: cgroupfs
+ Cgroup Version: 1
+ Plugins:
+  Volume: local
+  Network: bridge host ipvlan macvlan null overlay
+  Log: awslogs fluentd gcplogs gelf journald json-file local logentries splunk syslog
+ Swarm: inactive
+ Runtimes: io.containerd.runtime.v1.linux runc io.containerd.runc.v2
+ Default Runtime: runc
+ Init Binary: docker-init
+ containerd version: e25210fe30a0a703442421b0f60afac609f950a3
+ runc version: v1.0.1-0-g4144b63
+ init version: de40ad0
+ Security Options:
+  seccomp
+   Profile: default
+ Kernel Version: 5.10.16.3-microsoft-standard-WSL2
+ Operating System: Docker Desktop
+ OSType: linux
+ Architecture: x86_64
+ CPUs: 8
+ Total Memory: 6.028GiB
+ Name: docker-desktop
+ ID: ON2H:MY2B:CIHO:XOVG:ECSG:VVMP:S2UQ:AGNF:DJDB:3UW4:4J7Q:LE7L
+ Docker Root Dir: /var/lib/docker
+ Debug Mode: false
+ Registry: https://index.docker.io/v1/
+ Labels:
+ Experimental: false
+ Insecure Registries:
+  127.0.0.0/8
+ Live Restore Enabled: false	
+
+
+Docker path in Windows:
+-----------------------------
+Recent Docker Desktop - which now uses WSL, the docker image location in Windows 10
+
+First use Run - and type \\wsl$
+
+This will open the file explorer, and display the folders as below -
+
+docker-desktop
+docker-desktop-data
+
+volumes:
+\\wsl$\docker-desktop-data\version-pack-data\community\docker\volumes
+
+containers:
+\\wsl$\docker-desktop-data\version-pack-data\community\docker\containers
+
+
+	
+Docker in Mac
+-----------------------------
+- Similar to windows which has same 2 options:
+1/ Docker in Mac using Docker Toolbox (legacy)
+2/ Docker Desktop for Mac
+
+
+
+Windows Containers
+--------------------------------------
+- in early 2016, Microsoft announce windows based containers, we can now create windows images and run on windows containers on a windows server just like running linux containers on a linux system.
+- we can create windows images i.e. containerize apps and share them through the docker store.
+
+- Unlike Linux there are 2 types of containers in windows:
+	1/ Windows server: like linux where the underlying OS kernel is shared between containers.
+	2/ Hyper-V Isolation: to allow better security boundaries between containers anf to allow kernels with different versions and configuratiosn to co-exists. Each container is run within a highly optimized virtual machines, guranteeing complete kernel isolation between containers and the underlying host.
+	
+- while in linux world, we have a no. of linux bases base images such as ubuntu, debby, fedora, alpine etc. that we specify at the top of Dockerfile. in the windows world we have 2 options: 
+1/ windows server core.
+2/ Nano server: headless deployment of windows server which run in a fraction of time like the alpine image in case of linux.
+
+
+
+Docker Commands
+-----------------------------
+docker run
+-------------
+- start a container
+- if the image is not found in local, pull from docker hub and instantiate a container.
+- the pulling of image will be only for the first time.
+
+$ docker run <image_name>
+ex:
+$ docker run nginx
+
+
+docker ps
+------------
+- list all the running containers with some basic details. every container gets a random name if the an explicit name not provided during docker run.
+
+docker ps -a
+-------------
+- list all running + previsouy stopped or exited containers.
+
+docker stop
+-------------
+- stop a container for the given container name or id.
+$ docker stop silly_samet
+
+docker rm
+------------
+- remove a stopped or exited conatiner and reclaim the space.
+$ docker rm silly_samet
+
+docker images
+-------------
+- list all the images and its details pulled on local docker host.
+
+$ docker images
+REPOSITORY                      TAG                 IMAGE ID            CREATED             SIZE
+redis                           latest              ccee4cdf984f        8 months ago        105MB
+ubuntu                          latest              7e0aa2d69a15        9 months ago        72.7MB
+mysql                           latest              0627ec6901db        9 months ago        556MB
+nginx                           alpine              a64a6e03b055        9 months ago        22.6MB
+alpine                          latest              6dbb9cc54074        9 months ago        5.61MB
+nginx                           latest              62d49f9bab67        9 months ago        133MB
+postgres                        latest              26c8bcd8b719        9 months ago        314MB
+kodekloud/simple-webapp-mysql   latest              129dd9f67367        3 years ago         96.6MB
+kodekloud/simple-webapp         latest              c6e3cd9aae36        3 years ago         84.8MB
+
+$ docker images
+
+docker rmi
+----------------
+- remove an image no loner used. ensure we dont have any contaier running on the same image. stop all containers for that image, delete the containers and delete the image.
+
+$ docker rmi nginx
+
+
+docker pull
+---------------
+- to only pull image and not run any container.
+
+$ docker pull ubuntu
+
+when we execute "docker run ubuntu", it will run ubuntu container and exit immediately. listing docker ps wont show anything, docker ps -s will show that container is in an existed state.
+unlike VMs containers are not meant to host operating system. they are meant to run a specific task, process like host instance of web server or app server or a DB or sympy to carry a computation or analysis task, once the task complets the container exists.
+- contaienr only lives as long as the process inside of it lives. is the web-service inside the container is stopped or crashed, the container exits.this is why when we eun a container from an ubuntu image, it stops immediately, bacause ubuntu an image of the OS that is used to to use an a base image for other application, there is no process or app running in it by default.
+- if the image is not running as it is the same for ubuntu, we could instruct docker to run a process using docker run command. ex: $ docker run ubuntu sleep 4... this means when the container instantiates it runs the sleep command and goes into for next 4 secs, post which sleep command exits and the container stops.
+
+docker exec
+----------------
+- if we want to execute an command on a running container.
+
+$ docker exec silly_samet cat /etc/hosts
+- print the contents of /etc/hosts file on the running container: silly_samet
+
+docker run - attach and detach
+--------------------------------
+$ docker run kodekloud/simple-webapp
+- runs the container of simple-webapp image in foregroud, i.e. the output of the running web-app container is attached to the console.
+- wont be able to do anything on the console, other than view the o/p untill this container stops. it wont response to your i/p
+press CTRL+C to stop the container.
+
+$ docker run -d kodekloud/simple-webapp
+- run the container in backgorund as detach mode.
+- containet will continue to run in backgorund
+
+$ docker attach 1829rf
+- if we ant to bring back the container on foregroud, pass firts few chars of the contienr id.
+
+
+docker run - tag
+------------------
+$ docker run redis:4.0
+
+$ docker run redis -- pulls and run the latest tag
+
+
+docker stdin (-it i.e. interactive terminal)
+-----------------
+- we have an app which ask for my name then prints Hello <name>, 
+./app.sh
+
+Welcome! please enter your name: sandip
+
+Hello and Welcome Sandip !
+
+- if we dockerize this app (simple-prompt-app), docker wont wait for me to enter an input. it just executes and exit.
+- by default docker container does not listen to stdin, even though we attach to the console, it wont be able to read. as it does not have a terminal to read the input from. runs in a non iteractive mode.
+- we need to map the standard i/p of the host to the docker container using -i param,
+$ docker run -i kodekloud/simple-prompt-app
+Sandip
+
+Hello and Welcome Sandip !
+
+- still it does not ask the prompt "Welcome! please enter your name:", as the application prompt on the terminal and we have not attach to the container terminal, use -t option.
+
+$ docker run -it kodekloud/simple-prompt-app
+
+docker run - port mapping or port publishing (-p 80:5000)
+-----------------------------------------------------------
+$ docker run kodekloud/simple-webapp
+* running on http://0.0.0.0:5000 
+
+
+- simple-webapp is running/listenning on port 5000 of the container but what IP we use to access the web-app from browser? 
+2 options: 
+1/ use the docker container IP, every docker container gets an IP assigned by default. i.e. IP: 172.17.0.1 but this is an internal IP and only accesible within the docker host. can access http://172.17.0.1:500 from the same docker host web browser but cant access from outside any other hosts.
+2/ map any available port of docker host to the docker container to be able to access the web-app using the docker host IP (192.168.1.3)
+
+$ docker run -p 80:5000 kodekloud/simple-webapp
+all traffic on port 80 of docker host will get routed to port 5000 inside the docker container.
+
+http://192.168.1.3:80
+
+- this way we can run multiple instance of docker containers and map different port of docker host to those containers.
+
+$ docker run -p 8000:5000 kodekloud/simple-webapp
+$ docker run -p 8001:5000 kodekloud/simple-webapp
+
+$ docker run -p 3306:3306 mysql/mysql
+$ docker run -p 8306:3306 mysql/mysql
+
+docker - volume mapping
+----------------------------------------------
+$ docker run mysql
+- when DB is created, the data files will be stored in /var/lib/mysql location within the docker container.
+- every docker container has its own isolated file system and any change to any file happen within the container only. therefore, as soon as we stop and delete the container, all the data inside the container gets also parmanently deleted.
+
+- for persisting the data, map a directory out the container to a directory inside the conatiner.
+$ docker run -v /opt/datadir:/var/lib/mysql mysql
+
+- left -> host directory
+- right -> container directory
+
+docker inspect
+------------------
+- docker ps is for basic details like name, id etc.
+- docker inspect <container_name OR container_id> to get details (vol, network etc) in JSON format.
+$ docker inspect silly_samet
+
+container logs
+-----------------------
+- to see all the logs of a container running in the background
+
+- docker logs <container_name OR container_id>
+$ docker logs silly_samet
+
+
+environment variable
+----------------------------
+- good practice to exports all the environment specific variables to make the container runtime dynamic.
+$ export APP_COLOR=blue;
+
+- read this within application iike: color = os.environ.get('APP_COLOR')
+
+$ docker run -e APP_COLOR=red kodekloud/simple-webapp
+$ docker run -e APP_COLOR=blue kodekloud/simple-webapp
+
+
+
+Docker image (docker build <image_name>, docker push <image_name>)
+==================================================================
+- if we have to install our flask web-app on a regular host we usually do below steps:
+	- OS - Ubuntu
+	- Update apt report
+	- install dependencies using apt
+	- install python dependencies using pip
+	- copy source code to a path like /opt folder
+	- run the web server using "flask" command
+	
+- now that we have the instructions, create the image using the same.
+- Dockerfile
+--------------------
+FROM Ubuntu
+
+RUN apt-get updated
+RUN apt-get install python
+
+RUN pip install flask
+RUN pip install flash-mysql
+
+COPY . /opt/source-code
+
+ENTRYPOINT FLASK_APP=/opt/source-code/app.py flash run
+--------------------
+
+
+$ pwd
+/root/webapp-color
+
+$ ls -ltr
+total 16
+drwxr-xr-x 2 root root 4096 Jan 19 17:55 templates
+-rw-r--r-- 1 root root    5 Jan 19 17:55 requirements.txt
+-rw-r--r-- 1 root root 2259 Jan 19 17:55 app.py
+-rw-r--r-- 1 root root  113 Jan 19 17:55 Dockerfile
+
+
+sample Docker file:
+---------------------------
+FROM python:3.6
+RUN pip install flask
+COPY . /opt/
+EXPOSE 8080
+WORKDIR /opt
+ENTRYPOINT ["python", "app.py"]
+
+
+symtax to build the image locally:
+
+docker build -t <image_name>:<tag_name>   // tag_name is optional. if not given, the value will be latest
+
+$ docker build -t webapp-color .
+
+Sending build context to Docker daemon  121.3kB
+Step 1/6 : FROM python:3.6
+3.6: Pulling from library/python
+0e29546d541c: Pull complete 
+9b829c73b52b: Pull complete 
+cb5b7ae36172: Pull complete 
+6494e4811622: Pull complete 
+6f9f74896dfa: Pull complete 
+5e3b1213efc5: Pull complete 
+9fddfdc56334: Pull complete 
+404f02044bac: Pull complete 
+c4f42be2be53: Pull complete 
+Digest: sha256:f8652afaf88c25f0d22354d547d892591067aa4026a7fa9a6819df9f300af6fc
+Status: Downloaded newer image for python:3.6
+ ---> 54260638d07c
+Step 2/6 : RUN pip install flask
+ ---> Running in 37ce7302e20d
+Collecting flask
+  Downloading Flask-2.0.2-py3-none-any.whl (95 kB)
+Collecting Jinja2>=3.0
+  Downloading Jinja2-3.0.3-py3-none-any.whl (133 kB)
+Collecting itsdangerous>=2.0
+  Downloading itsdangerous-2.0.1-py3-none-any.whl (18 kB)
+Collecting Werkzeug>=2.0
+  Downloading Werkzeug-2.0.2-py3-none-any.whl (288 kB)
+Collecting click>=7.1.2
+  Downloading click-8.0.3-py3-none-any.whl (97 kB)
+Collecting importlib-metadata
+  Downloading importlib_metadata-4.8.3-py3-none-any.whl (17 kB)
+Collecting MarkupSafe>=2.0
+  Downloading MarkupSafe-2.0.1-cp36-cp36m-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_12_x86_64.manylinux2010_x86_64.whl (30 kB)
+Collecting dataclasses
+  Downloading dataclasses-0.8-py3-none-any.whl (19 kB)
+Collecting typing-extensions>=3.6.4
+  Downloading typing_extensions-4.0.1-py3-none-any.whl (22 kB)
+Collecting zipp>=0.5
+  Downloading zipp-3.6.0-py3-none-any.whl (5.3 kB)
+Installing collected packages: zipp, typing-extensions, MarkupSafe, importlib-metadata, dataclasses, Werkzeug, Jinja2, itsdangerous, click, flask
+Successfully installed Jinja2-3.0.3 MarkupSafe-2.0.1 Werkzeug-2.0.2 click-8.0.3 dataclasses-0.8 flask-2.0.2 importlib-metadata-4.8.3 itsdangerous-2.0.1 typing-extensions-4.0.1 zipp-3.6.0
+WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv
+WARNING: You are using pip version 21.2.4; however, version 21.3.1 is available.
+You should consider upgrading via the '/usr/local/bin/python -m pip install --upgrade pip' command.
+Removing intermediate container 37ce7302e20d
+ ---> 5b842274fd45
+Step 3/6 : COPY . /opt/
+ ---> 49a72fadf9be
+Step 4/6 : EXPOSE 8080
+ ---> Running in 4f75c7639e27
+Removing intermediate container 4f75c7639e27
+ ---> 1c427e70bea9
+Step 5/6 : WORKDIR /opt
+ ---> Running in 7879a13507d9
+Removing intermediate container 7879a13507d9
+ ---> 9df238646257
+Step 6/6 : ENTRYPOINT ["python", "app.py"]
+ ---> Running in 368ac8315aec
+Removing intermediate container 368ac8315aec
+ ---> daa92f4c3b7c
+Successfully built daa92f4c3b7c
+Successfully tagged webapp-color:latest
+
+
+
+- Run an instance of the image webapp-color and publish port 8080 on the container to 8282 on the host.
+$ docker run -p 8282:8080 webapp-color
+
+ This is a sample web application that displays a colored background. 
+ A color can be specified in two ways. 
+
+ 1. As a command line argument with --color as the argument. Accepts one of red,green,blue,blue2,pink,darkblue 
+ 2. As an Environment variable APP_COLOR. Accepts one of red,green,blue,blue2,pink,darkblue 
+ 3. If none of the above then a random color is picked from the above list. 
+ Note: Command line argument precedes over environment variable.
+
+
+No command line argument or environment variable. Picking a Random Color =red
+ * Serving Flask app 'app' (lazy loading)
+ * Environment: production
+   WARNING: This is a development server. Do not use it in a production deployment.
+   Use a production WSGI server instead.
+ * Debug mode: off
+ * Running on all addresses.
+   WARNING: This is a development server. Do not use it in a production deployment.
+ * Running on http://172.12.0.2:8080/ (Press CTRL+C to quit)
+
+
+
+- What is the base Operating System used by the python:3.6 image?
+
+$ docker run python:3.6 cat /etc/*release*
+
+PRETTY_NAME="Debian GNU/Linux 11 (bullseye)"
+NAME="Debian GNU/Linux"
+VERSION_ID="11"
+VERSION="11 (bullseye)"
+VERSION_CODENAME=bullseye
+ID=debian
+HOME_URL="https://www.debian.org/"
+SUPPORT_URL="https://www.debian.org/support"
+BUG_REPORT_URL="https://bugs.debian.org/"
+
+
+- shorten the size of image:
+
+FROM python:3.6-alpine
+RUN pip install flask
+COPY . /opt/
+EXPOSE 8080
+WORKDIR /opt
+ENTRYPOINT ["python", "app.py"]
+
+
+$ docker build -t webapp-color:lite .
+
+Sending build context to Docker daemon  122.4kB
+Step 1/6 : FROM python:3.6-alpine
+3.6-alpine: Pulling from library/python
+59bf1c3509f3: Pull complete 
+8786870f2876: Pull complete 
+acb0e804800e: Pull complete 
+52bedcb3e853: Pull complete 
+b064415ed3d7: Pull complete 
+Digest: sha256:579978dec4602646fe1262f02b96371779bfb0294e92c91392707fa999c0c989
+Status: Downloaded newer image for python:3.6-alpine
+ ---> 3a9e80fa4606
+Step 2/6 : RUN pip install flask
+ ---> Running in bbd914fe5835
+Collecting flask
+  Downloading Flask-2.0.2-py3-none-any.whl (95 kB)
+Collecting click>=7.1.2
+  Downloading click-8.0.3-py3-none-any.whl (97 kB)
+Collecting Jinja2>=3.0
+  Downloading Jinja2-3.0.3-py3-none-any.whl (133 kB)
+Collecting Werkzeug>=2.0
+  Downloading Werkzeug-2.0.2-py3-none-any.whl (288 kB)
+Collecting itsdangerous>=2.0
+  Downloading itsdangerous-2.0.1-py3-none-any.whl (18 kB)
+Collecting importlib-metadata
+  Downloading importlib_metadata-4.8.3-py3-none-any.whl (17 kB)
+Collecting MarkupSafe>=2.0
+  Downloading MarkupSafe-2.0.1-cp36-cp36m-musllinux_1_1_x86_64.whl (29 kB)
+Collecting dataclasses
+  Downloading dataclasses-0.8-py3-none-any.whl (19 kB)
+Collecting typing-extensions>=3.6.4
+  Downloading typing_extensions-4.0.1-py3-none-any.whl (22 kB)
+Collecting zipp>=0.5
+  Downloading zipp-3.6.0-py3-none-any.whl (5.3 kB)
+Installing collected packages: zipp, typing-extensions, MarkupSafe, importlib-metadata, dataclasses, Werkzeug, Jinja2, itsdangerous, click, flask
+Successfully installed Jinja2-3.0.3 MarkupSafe-2.0.1 Werkzeug-2.0.2 click-8.0.3 dataclasses-0.8 flask-2.0.2 importlib-metadata-4.8.3 itsdangerous-2.0.1 typing-extensions-4.0.1 zipp-3.6.0
+WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv
+WARNING: You are using pip version 21.2.4; however, version 21.3.1 is available.
+You should consider upgrading via the '/usr/local/bin/python -m pip install --upgrade pip' command.
+Removing intermediate container bbd914fe5835
+ ---> 49b436b124ee
+Step 3/6 : COPY . /opt/
+ ---> 9c9c5105ae3f
+Step 4/6 : EXPOSE 8080
+ ---> Running in 15e065ec3c8b
+Removing intermediate container 15e065ec3c8b
+ ---> de4c06e91938
+Step 5/6 : WORKDIR /opt
+ ---> Running in c51f6bbdede9
+Removing intermediate container c51f6bbdede9
+ ---> ec70be770823
+Step 6/6 : ENTRYPOINT ["python", "app.py"]
+ ---> Running in 4c99bfc638a3
+Removing intermediate container 4c99bfc638a3
+ ---> 2ce50c0feb06
+Successfully built 2ce50c0feb06
+Successfully tagged webapp-color:lite
+
+
+
+$ docker images
+
+REPOSITORY                      TAG                 IMAGE ID            CREATED             SIZE
+webapp-color                    lite                2ce50c0feb06        2 minutes ago       51.8MB
+webapp-color                    latest              daa92f4c3b7c        20 minutes ago      913MB
+python                          3.6                 54260638d07c        4 weeks ago         902MB
+python                          3.6-alpine          3a9e80fa4606        7 weeks ago         40.7MB
+redis                           latest              ccee4cdf984f        8 months ago        105MB
+ubuntu                          latest              7e0aa2d69a15        9 months ago        72.7MB
+mysql                           latest              0627ec6901db        9 months ago        556MB
+nginx                           alpine              a64a6e03b055        9 months ago        22.6MB
+alpine                          latest              6dbb9cc54074        9 months ago        5.61MB
+nginx                           latest              62d49f9bab67        9 months ago        133MB
+postgres                        latest              26c8bcd8b719        9 months ago        314MB
+nginx                           1.14-alpine         8a2fb25a19f5        2 years ago         16MB
+kodekloud/simple-webapp-mysql   latest              129dd9f67367        3 years ago         96.6MB
+kodekloud/simple-webapp         latest              c6e3cd9aae36        3 years ago         84.8MB
+
+
+
+- Run an instance of the new image webapp-color:lite and publish port 8080 on the container to 8383 on the host.
+
+$ docker run -d -p 8383:8080 webapp-color:lite
+abb5590f3e6246bddf0a920a68ac9074a19a0940249356dcc1ca74edf8ce8ca3
+
+
+$ docker ps
+
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS                    NAMES
+abb5590f3e62        webapp-color:lite   "python app.py"     27 seconds ago      Up 25 seconds       0.0.0.0:8383->8080/tcp   interesting_turing
+
+
+
+
+
+$ docker build Dockerfile -t sandip/my-custom-web-app
+- this will build the image locally on my system
+
+$ docker push sandip/my-custom-web-app
+- this make the image public on dockerhub
+
+- the name of the image has 2 parts: account/image-name
+
+- every image must be based on a base image either an OS base image or another image (already created which is again based on a OS image)
+
+- RUN instructions are to execute commands to run on the base image.
+- COPY instruction is to copy local files on to the docker image.
+- ENTRYPOINT allows to specify a command that will be run when the image is run as a container.
+
+
+Layered Architecture
+-----------------------------
+- when the docker builds the image it build in layered fashion, each line of instruction creates a new layer in the docker image on top of the changes from its previous layer.
+
+layer1: FROM Ubuntu										-- 120 MB
+layer2: apt-get updated && apt-get -y install python	-- 306 MB
+layer3: pip install flask								-- 6.3 MB
+layer4: COPY . /opt/source-code							-- 229 B
+layer5: ENTRYPOINT FLASK_APP=/opt/source-code/app.py flash run  (update entrypoint with 'flask' command)	-- 0 B
+
+- we can see these layer details by docker history command
+$ docker history <image_name i.e. account/image-name>
+
+- when we build the image using docker build, all the layers are shown in console as steps and all these layers are cached. so incase a particular step fails, re-running the build command reuse the previous layers from cache and only starts from last failed step. helps when we update the srccode which frequently changes as the layers above stays same, hence takes small time time to build.
+
+
+
+Docker CMD vs ENTRYPOINT
+----------------------------------
+- who defined what process to run within the container.
+- If we look at the Dockerfile of nginx or mysql we will see like below at the end:
+
+# define default command
+CMD ["nginx"]
+
+# define default command
+CMD ["mysqld"]
+
+- CMD defines the program that will be run when the container start.
+
+- but for the Dockerfile for ubuntu image, its like, bash is not like process like web-server or DB server, its a shell that listen for i/p from terminal if it can not find i/p from terminal, it exits. 
+CMD ["bash"]
+
+- when we run a container using Ubuntu image, docker created a container from the Ubuntu image and launched the bash program, bydefault docker does not attach a terminal when its run. so the bash program does not find a terminal so it exits. 
+
+How do we specify a different command to start a container?
+- append a command to the docker RUN command, it overrides the default command specified in the image.
+- docker run <image_name> [COMMAND]
+$ docker run ubuntu sleep 5
+
+- 2 syntax:
+CMD command param1        	---> 	CMD sleep 5
+CMD ["comand", "param1"]	-->		CMD ["sleep", "5"] ,, CMD ["sleep 5"] is wrong.
+
+- new Dockerfile
+FROM Ubuntu
+CMD sleep 5
+
+$ docker build -t ubuntu-sleeper .
+$ docker run ubuntu-sleeper
+
+- How we can pass a different sleep interval?
+- $ docker run ubuntu-sleeper sleep 10 -- this is not a good practice.
+
+- Here comes the use of ENTRYPOINT, here param gets appended to the command specified in ENTRYPOINT.
+FROM Ubuntu
+ENTRYPOINT ["sleep"]
+
+$ docker run ubuntu-sleeper 10
+
+- incase of CMD the param after "docker run <image_name>" gets replaced completely, but in ENTRYPOINT, it just the param to the command.
+- but with ENTRYPOINT, if we just "docker run ubuntu-sleeper" it will throw error (sleep: missing operand), as it will not have any default interval. thats where we use both ENTRYPOINT and CMD.
+FROM Ubuntu
+ENTRYPOINT ["sleep"]
+CMD ["5"]
+
+so the final command at startup by default will be: sleep 5 and if we pass the interval, ($ docker run ubuntu-sleeper 10), it will override.
+ 
+*** NOTE: mandatory to use JSON fomar syntax for both ENTRYPOINT and CMD when using both
+
+- if we want to override the command itself specified in ENTRYPOINT (i.e. sleep), use 
+$ docker run --entrypoint sleep2.0 ubuntu-sleeper 30
+
+- final command at startup will be: sleep2.0 30
+
+
+Docker Networking
+===============================================
+- When we install docker, it creates 3 networks automatically: 
+1/ bridge - default network, a container gets attached to it, if we dont specify anything while docker run. (ex: $ docker run ubuntu)
+2/ none
+3/ host
+
+- if we need to associate a container with any other network, we do like;
+$ docker run ubuntu --network=none
+$ docker run ubuntu --network=host
+
+1/ bridge
+- private internal network created by docker on the host, all containers gets attach to this type of network by default
+- they get an internal IP address usially in the series of 172.17
+- containers can access each otther using these internal IP if required.
+- to access any of these containers from the outside world, map the container port to the port of host
+
+docker-0 (172.17.0.1) - web-container-1 (172.17.0.2) - web-container-2 (172.17.0.3) - web-container-3 (172.17.0.4)
+
+
+$ docker network ls   ----> list all the networks.
+
+
+
+3/ host
+- another way to access the containers externally is to associate the container to the host network, this takes out any network isolation betweek the docker host and docker container.-
+- if we run a webserver container on port 5000 its automatically map to port 5000 of host without requiring any port mapping, as the web container uses the host network
+- so, not be able run multiple container of same image on the same host and port, as the posrt are now common to all containers.
+
+2/ none
+- containers has no access to any network and hence is osolated. 
+
+
+User defined network
+------------------------------
+- what if we wish to isolate bridge networks withing the docker host, fr ex: the first 2 docker container on internal network 172.17 and second two container on separate internal network: 182.18
+- by default docker creates one internal network only. but we can create out own internal network using "docker network"
+
+$ docker network create --driver bridge --subnet 182.18.0.0/16 custom-isolated-network
+
+182.18.0.0/16 is CIDR notation means:
+this is the range of 32-16 = 16 = 2 ^ 16 = 65,536
+IP range: 182.18.0.0  to 182.18.255.255
+
+
+- list all docker networks.
+$ docker network ls   
+
+- inspect network
+$ docker inspect <container_name> 
+
+Embedded DNS
+-----------------------------
+- container can reach/communicate each other using their names, ex: a web-server container can use the name of mysql container while connecting in JDBC connection string insteda of its internal IP as its not guranteed that the container get the same IP during reboots.
+
+docker-0 (172.17.0.1) - web-container-1 (172.17.0.2) - mysql-1 (172.17.0.3)
+
+mysql.connect(172.17.0.3)
+ 
+- all containers in a docker host can resolve each other using the name of the container. 
+- docker has a built-in DNS server that helps the container to resolve each other using the container name.
+- the built-in DNS server always run on 127.0.0.11
+
+How Docker implement the networking? How the containers networks are isolated that its host network?
+- Docker use network namespace that creates a separate namespace for each container. It then use virtual ethernet pairs to connect containers together.
+
+
+Docker Storage
+===================================================
+- when we install docker on a system, it created the below folder structure at var/lib/docker:
+- var/lib/docker
+	- aufs
+	- containers
+	- image
+	- volumes
+- this is where docker stores all of its data (files related to images/containers etc.)
+- any volumes created goes to volume folder.
+
+- each instructions in Dockerfile creates a layer with just the changes from the previous layer. 
+
+
+
+- Dockerfile1
+--------------------
+FROM Ubuntu
+
+RUN apt-get updated && apt-get install python
+
+RUN pip install flask flash-mysql
+
+COPY . /opt/source-code
+
+ENTRYPOINT FLASK_APP=/opt/source-code/app.py flash run
+--------------------
+
+layer1: FROM Ubuntu										-- 120 MB
+layer2: apt-get updated && apt-get -y install python	-- 306 MB
+layer3: pip install flask flash-mysql					-- 6.3 MB
+layer4: COPY . /opt/source-code							-- 229 B
+layer5: ENTRYPOINT FLASK_APP=/opt/source-code/app1.py flash run  (update entrypoint with 'flask' command)	-- 0 B
+
+$ docker build Dockerfile -t sandip/my-custom-web-app1
+
+
+
+- Dockerfile2
+--------------------
+FROM Ubuntu
+
+RUN apt-get updated && apt-get install python
+
+RUN pip install flask flash-mysql
+
+COPY . /opt/source-code
+
+ENTRYPOINT FLASK_APP=/opt/source-code/app2.py flash run
+--------------------
+
+layer1: FROM Ubuntu										-- 0 MB
+layer2: apt-get updated && apt-get -y install python	-- 0 MB
+layer3: pip install flask flash-mysql					-- 0 MB
+layer4: COPY . /opt/source-code							-- 229 B
+layer5: ENTRYPOINT FLASK_APP=/opt/source-code/app2.py flash run  (update entrypoint with 'flask' command)	-- 0 B
+
+$ docker build Dockerfile -t sandip/my-custom-web-app2
+
+
+- So once the build is complete we cant modify these layers. ther are READ-ONLY, we can modify by initiating a build.
+
+
+
+layer6: CONTAINER layer: WRITABLE
+
+---- $ docker run sandip/my-custom-web-app
+
+IMAGE layers: READ-ONLY
+layer5: update entrypoint using 'flask' command
+layer4: copy source code
+layer3: changes in pip packages
+layer2: changes in apt packages
+layer1: base ubuntu layer
+
+---- $ docker build Dockerfile -t sandip/my-custom-web-app 
+
+
+- the writable layer which gets created on top of image layer on docker run, is used to store data created by the container (log files, temp files, any files modifed by the app user), the life of this CONTAINER layert as long the container is alive. this gets destroyes once the container stops, but the image layer stays intact.
+
+- NOTE: the image layer is shared by all of the containers created on the same image.
+
+- The source code is part of the READ-ONLY image layer which is shared, but that does not mean we cant modify the src for testing a change. So before I save any src code , Docker creates a copy of the file in READ-WRITE layer and then we will be able to test this version of the file.
+
+- Image layer stays same all the time until; we re-build the image.
+
+
+Docker Volume Mount
+---------------------------------
+$ docker volume ls      -----> list all the registered volumes.
+
+- volume mount is to mount a location/directory of /var/lib/docker/volumes on docker host to the containres.
+
+- when we stop the container, the entire CONTAINER layer gets purged along with the container. what if we want to persist specially the DB data files created by a DB container.
+
+- to do this, we first need to create a volume, using "docker volume create data_volume", it creates a new folder "data_volume" under "/var/lib/docker/volumes/"
+
+- then we run the "docker run -v data_volume:/var/lib/mysql mysql", this way we mount the external host location to the /var/lib/mysql directory of the mysql container. NOTE: "/var/lib/mysql" is the default location where mysql stores data files.
+
+- Even we dont create the volume first, docker creates new volume if we use -v option during docker run.
+
+$ docker run -v data_volume2:/var/lib/mysql mysql  
+
+- -v is old syntax:
+
+$ docker run \
+--mount type=mount,source=data_volume2,target=/var/lib/mysql mysql
+
+- source: location on docker host
+- target: is location on the container
+
+- this will create a new volume i.e. data_volume2 and then mount and start the container.
+
+- we should see all these directories if we list /var/lib/docker/volumes/ directory on the docker host.
+
+
+
+Docker Bind Mount (external - NAS)
+--------------------------------------
+- - Bind mount is to mount any location/directory on docker host to the containres.
+- If we have an external NAS storage which is mounted on Docker host on a different directory than docker volueme directory (/var/lib/docker/volumes)
+- in this case we need to give complete path ex: NAS mount is: /data/mysql
+
+$ docker run -v /data/mysql:/var/lib/mysql mysql
+
+OR
+
+$ docker run \
+--mount type=bind,source=/data/mysql,target=/var/lib/mysql mysql
+
+
+Storage Drivers
+--------------------------------------
+- Docker uses storage drivers to manager the docker layered architecture.
+- some of common storage drivers:
+AUFS
+ZFS
+BTRFS
+Device Mapper
+Overlay
+Overlay2
+
+- selection of storage drivers depends upon the underlysing OS in use. ex: in Ubuntu, default storage drivers is AUFS, Docker choose the best available storage drivers automatically based on the underlying OS system.
+
+
+Docker Compose
+======================================
+- https://github.com/cloudacademy/docker-compose-training
+- This is to have all docker configurations in Yaml
+- docker compose, we can create a configuration file in yaml format called docker-compose.yml and put together different services and option to run the file.
+ex:
+
+$ docker run sandip/my-custom-web-app
+$ docker run mongodb
+$ docker run redis:alpine
+$ docker run ansible
+
+all these above can be written in docker-compose.yml like below:
+
+docker-compose.yaml
+--------------------
+services:
+	web:
+		image: "sandip/my-custom-web-app"
+	database:
+		image: "mongodb"
+	messaging:
+		image: "redis:alpine"
+	orchestration:
+		image: "ansible"
+
+
+- now to run this compose file:
+$ docker-compose up
+
+- this is only possible to run all these containres on same docker host.
+
+sample application - voting app
+--------------------------------------
+voting-app (UI to vote by the end users)	---------->		in-mem DB (redis)	----------->	worker
+worker		---------> 		DB (postgres)		------> 	result-app (show the vote result)
+
+
+$ docker run -d --name=redis redis
+$ docker run -d --name=db postgres:9.4
+$ docker run -d --name=vote -p 5000:80 voting-app
+$ docker run -d --name=result -p 5001:80 result-app
+$ docker run -d --name=worker worker
+
+- But we have not linked these containers together i.e. there could be multiple instances of redis/postgres/worker running on the same docker host, we have not yet told, the containers of voting-app or result-app to use which redis/postgres container instance.
+
+--link option of docker run to connect dependent containers
+---------------------------------------------------------------
+def get_redis():
+	if not hasattr(g, 'redis'):
+		g.redis = Redis(host='redis', db=0, socket_timeout=5)
+	return g.redis
+	
+- here the voting-app is resolving the redis container connection by the name "redis"
+
+$ docker run -d --name=vote -p 5000:80 --link redis:redis voting-app
+
+- left-> name of redis container i.e. here its redis and right-> name of the connection string used in voting-app code. i.e. here its "redis"
+- this will internally add an entry (the host string name i.e. redis and the internal IP) to /etc/hosts file of voting-app container.
+$ cat /etc/hosts
+172.0.0.1		localhost
+..
+..
+..
+172.17.0.2		redis	89jjskshag87aj
+..
+..
+
+
+- similary add --link to the result-app to connect to postgres container service.
+pg.connect('postgres://postgres@db/postgres', function(err, client, done)) {
+	if (err) {
+		console.error("Waiting for DB")
+	}
+	callback(err, client)
+}
+
+
+$ docker run -d --name=result -p 5001:80 --link db:db result-app
+
+- Also the worker app need access to both redis and postgres services.
+try {
+	Redis redis = connectToRedis("redis");
+	Connection dbConn = connectToDB("db");
+	
+	System.out.println("Watching vote queue");
+}
+
+$ docker run -d --name=worker --link db:db --link redis:redis worker
+
+
+- Once we have docker run command ready and tested, its easy to generate docker-compose file from it.
+
+
+$ docker run -d --name=redis redis
+$ docker run -d --name=db postgres:9.4
+$ docker run -d --name=vote -p 5000:80 --link redis:redis voting-app
+$ docker run -d --name=result -p 5001:80 --link db:db result-app
+$ docker run -d --name=worker --link db:db --link redis:redis worker
+
+- docker-compose.yml
+- start creating of dictionary of docker containers names, use the same name used in above docker run commands, take all the names and create a key with each of them.
+- under each container name item, we specify which image to use. key is: "image" and value is the image name to use.
+- next add the ports used only to those containers needing to publish the ports externally, with key: ports (array) and list all the ports we would like to publish.
+- add links, key: links (array) to whichever container requires links by the container_name, adding links if the container_name and the connection string used is same, then db:db can also be written as db
+
+- docker-compose.yml 
+
+redis:
+	image: redis
+db:
+	image: postgres:9.4
+vote:
+	image: voting-app
+	ports:
+		- 5000:80
+	links:
+		- redis:redis
+result:
+	image: result-app
+	ports:
+		- 5001:80
+	links:
+		- db
+worker:
+	image: worker
+	links:
+		- redis
+		- db
+
+- run the docker-compose up command to bringup the entire application stack
+$ docker-compose up 
+
+
+Docker compose - build
+---------------------------------
+- when we created the docker-compose.yml file, we assumed all the images are already build.
+- redis and postgres are common and available in docker registry but the remaining 3 apps are our own and its not necessary that they are already build and available in docker regsistry.
+- if we would like to instrauct docker-compose to run docker build, instead of trying to pull and image, we can replace the image link in docker-compose.yml file with a build line and specify the directory location on docker host local which contains the app code and the Dockerfile which has the complete instructions to build the docker image.
+
+
+vote:
+	build: ./vote
+	ports:
+		- 5000:80
+result:
+	build: ./result
+	ports:
+		- 5001:80
+	links:
+		- db
+worker:
+	build: ./worker
+	links:
+		- redis
+		- db
+		
+- so here, wehn we run the docker-compose up commend, it will first build the voting-app image, give a temporay name for it and then use that image to run instruction given in docker-compose.yml
+
+
+
+Docker compose - version
+*********************************************
+- There are multiple versions of syntax of docker-compose yml which has evolved over time and has now lot more options.
+
+version-1 (docker-compose.yml)
+-------------------------------
+- limitaions: 
+	- no option to specify your own custom bridge network other than the docker's default bridge network
+	- no option of sequence the containers. ex: lets say DB conatiners to comeup first then the voting-app could be started.
+
+redis:
+	image: redis
+db:
+	image: postgres:9.4
+vote:
+	image: voting-app
+	ports:
+		- 5000:80
+	links:
+		- redis
+		
+
+version-2 (docker-compose.yml)
+-------------------------------
+- from version 2 of docker-compose file, need to specify the version at the top for docker enigine to understand.
+- all the stack of your container info are now defined under services section.
+- networking: in version 1 docker-compose attaches all the containers it runs to the default bridge network and use links to enable communication between the containers as before, with version 2, docker-compose automtically creates an dedicated bridge network then attach all the conatiners to the new network, container the able to communicate to each other using their service name, hence get rid of links.
+- depends_on: if we want to add dependency linke voting-app requires redis service to startup first. under the depends_on section add the list of container services which will started first.
+
+version: 2
+services:
+	redis:
+		image: redis
+	db:
+		image: postgres:9.4
+	vote:
+		image: voting-app
+		ports:
+			- 5000:80
+		depends_on: 
+			- redis
+
+
+version-3 (docker-compose.yml) - latest as of Sep 2021
+------------------------------------------------------
+- support for docker swam
+version: 3
+services:
+	redis:
+		image: redis
+	db:
+		image: postgres:9.4
+	vote:
+		image: voting-app
+		ports:
+			- 5000:80
+		depends_on: 
+			- redis
+
+
+Networking in Docker compose
+*********************************************
+- as we know, docker-compose by default all the container mentioned on default bridge network.
+- lets say, we modify the architecture to measure the traffic from the different sources, ex: separate the end user generated traffic (user access to app) from apps internal traffic (app to DB/cache)
+- front-end network > dedicated for end users accessing the app. i.e. connect the voting-app and result-app to the front-end network
+- back-end network > dedicated for backedn traffic between the services. i.e.. connect all the containers (voting-app, result-app, db, redis, worker) to the back-end network
+
+
+docker-compose.yml
+--------------------
+version: 3
+services:
+	redis:
+		image: redis
+		networks:
+			- back-end	
+	db:
+		image: postgres:9.4
+		networks:
+			- back-end
+	worker:
+		build: ./worker
+	networks:
+		- back-end
+	vote:
+		image: voting-app
+		ports:
+			- 5000:80
+		depends_on: 
+			- redis
+		networks:
+			- front-end
+			- back-end
+
+networks:
+	front-end
+	back-end
+
+
+
+Docker Registry
+=========================================
+- Its the central repo for all docker images.
+
+- we define the image section in docker run
+
+image: nginx/nginx
+
+nginx  		/  		nginx
+------				------
+user/acc_name			image/repo
+
+- if we dont privide both the account_name and image name it assumes both are same and then search on the registry.
+- account_name is basically the dockerhub user account or if its an organization, its the name of the org.
+
+- the default place from which the image is pulled/pushed if not provided, its the DockerHub, the DNS is docker.io
+
+image: docker.io/nginx/nginx
+
+
+docker.io	 /		nginx  		    /  		nginx
+----------			------					------
+registry	 /		user/acc_name	/		image/repo
+
+
+- many other popular registry: google (gcr.io) where lot of kubernetes related images are stored.
+- many cloud service providers (aws/azure/gcp) provides private registry when we open account.
+
+
+Docker private Registry
+--------------------------------------
+- To run image from any private registry, we need to first login and then docker run prefix with private registry DNS.
+- if dont login it complains that the image cant be found.
+$ docker login private-regsistry.io
+
+
+$ docker run private-regsitry.io/apps/internal-app1
+
+- How do we install a docker private registry within our organization?
+	- Docker registry itself is an another application which maintain/manages different images and its available as a docker image. the name of the image is: registry and it exposes its APIs on port 5000
+	
+	- $ docker run -d -p 5000:5000 --name registry registry:2
+	
+- How to push a private image to private registry?
+	- first tag the image.
+		- $ docker image tag my-image localhost:5000/my-image    (if the registry serviec is running on same docker host where we running the docker image command)
+	- then push the image.
+		- $ docker push localhost:5000/my-image
+		
+
+Docker Engine
+============================================
+- Docker engines is simply referred to a host with docker installed on it.
+- when we install docker on a linux machine, we are actually 3 different components (Docker Daemon, REST API server and Docker CLI)
+	- Docker Daemon: is a backgound process that manages objects such as images, containers, volumes and networks
+	- Docker REST API server: API interface that programs can use to talk to the daemon and provide instructions, we can create our own customized tool using these REST APIs
+	- Docker CLI: command line interface to run various docker commands (run/stop/rm), it uses the REST APIs to interact with Docker Daemon. Docker CLI need not to be on the same host as Docker Daemon or Docker REST API server. ex: Docker CLI on laptop connecting to Docker Daemon remotely.
+		- use -H=<remote-docker-engine-address>:2375, ex: $ docker -H=10.123.2.1:2375 run nginx
+		
+Containerization - internals
+-------------------------------------------
+- How exactly our apps are containerized in Docker? How does it work under the hood?
+- Docker use namespace to isolate workspace. process ID, Network, InterProcess communication, Mounts and Unix Timesharing system are created on their own namespace, thereby providing isolation between containers.
+
+- Lets take a look one of namespace idolation technique i.e. Namepspace - PID
+	- whenever a linux system boots up, it start one root process with PID: 1, then kicks off all the other process in the system, by the time the system boots up completely we have a handfull no. of processes running. Check the no. of process running using unix command: ps
+	- PID is unique and 2 process cant not have same PID.
+	- when we create container which basically a child system under the current host system, the child system has its own set of process and totally independent from the underlying host system. and it also gets root process of PID: 1 and likewise its child processes.
+	- BUT we know there is no hard isolation between them, so the processes running on containers are actually processes on the undrelying host system and 2 process cant have same PID.
+	-  ex: an nginx container which run nginx server, listing all running process within the container show nginx running with its PID. listing all running process on docker hosts shows the same nginx service but with a different PID. that indicates all processes are infact running on the same underlying hosts system but they are separated into their own containers using NAMESPACES.
+	
+cgroups (control groups)
+-----------------------------------------
+- we know the docker container and underlying host share the same syetm resources such as CPU, Memory.
+
+- How much of these resources are dedicated to host and the containers and How does docker manage and shares the resources between the multiple containers?
+	- by default there is not limitaions of how much of resource capacity any container can use. Hence a container can end up utilizing all the resources of the underlying host.
+	- we can restrict the amount of CPU/memmory a conatiner can use.
+	- Docker use cgroups or control groups to restrict the amount of hardware resources allocated to each of containers. use the --cpus option on docker run command.
+	- $ docker run --cpus=.5 ubuntu    (here docker ensure this container max cpu usage will be 50% of total host CPU at any given time)
+	- $ docker run --memory=100m ubuntu    (here docker ensure this container max mem usage will be 100 MB)
+	
+
+
+Container Orchestration
+=========================================
+- So far we have seen, with docker, we can run a single instance of the application with docker run command. ex: to run an instance of nodejs app, docker run nodejs
+- but this just one instance of nodejs app on one docker host.
+- what if the no. of users load increased and the single instance is not loner able to handle the load. so we create additinal instance using running multiple docker run nodejs.
+- need to keep a close watch on the health of these apps. and if a contaner fails, we need to detect that and run the docker run again to deploy another instance of that apps.
+- what if the docker host itself crashes and the container hosted on that docker machine becomes inaccessible.
+
+- when we have large no. of application running 10s.100s no. of containers running, monitoring the state/health/remediation becomes a challenge. we can run our own script to tacke these situation to soem extent.
+
+- Container orchestration is the solution
+
+- set of tools and scripts to help hosting containers in a prod env. i.e. consist of multiple docker hosts that can host containers. 
+- easily allows deploying 100s/1000s of containers with a single command.
+
+$ docker service create --replicas=100 nodejs
+
+- this command is used for docker swam.
+
+- it also helps in auto scale up/down also automatically add additional hosts to support user load, also support advanced netwrking between the containers spreading accros different docker hosts, also load balancing, shared storage between the hosts, configuration management, security within the cluster.
+
+- multiple orchestration solutions available: 
+1/ Docker Swarm by Docker - easy to setup but lacks auto-scale requirements
+	- create a cluster of multiple docker machines.
+	- distributes srvices/containers instances into separate hosts increasing resiliency/high availability and load balancing accord different systems and hardware.
+	- install docker in all hosts, designate one host as swarm manager and others as worker, then run docker swarm init on Swarm master node to initialize the docker swarm.
+	- $ docker swarm init --advertise-addr 192.168.1.12   (returns a token)
+	- docker swarm join --token <token>      (run this command on all worker using the above token to join the cluster)
+	
+	- now the cluster is ready to run containers, but running containers on each worker node is not the way, hence use the swarm orchestration techniques. Use "docker service" to run one or more instance of application accors the nodes in the swarm cluster.
+	$ docker service create --relicas=3 <image_name>  (run on swarm master node)
+	$ docker service create --relicas=3 -p 8080:80 <image_name>
+	$ docker service create --relicas=3 --netwrok front-end <image_name>
+	
+2/ Kubernetes by Google - complicated to setup to get started but has more advanced options to customize and has support for many vendors. Now supported on all public cloud, AWS, GSP, Azure.
+	- with kubernets cli command i.e. kubectl, we can run mulyiple instance of containers on the cluster:
+	$ kubectl run --replicas=1000 <image_name>
+	
+	- roling update these application: $ kubectl rolling-update my-web-server --image=web-server:2
+	- rollback: $ kubectl rolling-update my-web-server --rollback
+
+3/ MESOS by Apache
+
+C:\Users\pauls>docker run hello-world
+Unable to find image 'hello-world:latest' locally
+latest: Pulling from library/hello-world
+b8dfde127a29: Pull complete
+Digest: sha256:0fe98d7debd9049c50b597ef1f85b7c1e8cc81f59c8d623fcb2250e8bec85b38
+Status: Downloaded newer image for hello-world:latest
+
+Hello from Docker!
+This message shows that your installation appears to be working correctly.
+
+To generate this message, Docker took the following steps:
+ 1. The Docker client contacted the Docker daemon.
+ 2. The Docker daemon pulled the "hello-world" image from the Docker Hub.
+    (amd64)
+ 3. The Docker daemon created a new container from that image which runs the
+    executable that produces the output you are currently reading.
+ 4. The Docker daemon streamed that output to the Docker client, which sent it
+    to your terminal.
+
+To try something more ambitious, you can run an Ubuntu container with:
+ $ docker run -it ubuntu bash
+
+Share images, automate workflows, and more with a free Docker ID:
+ https://hub.docker.com/
+
+For more examples and ideas, visit:
+ https://docs.docker.com/get-started/
+ 
+ 
+ 
+Docker Lab on AWS Unix
+===============================================
+- Launch EC2 instance
+
+
+-----------------------------------------------
+- You will install Docker using the yum package manager that is available on Amazon Linux. Docker comes in two flavors: Community Edition (CE) and Enterprise Edition (EE). The community edition is open source and available free of charge. 
+
+- Instructions
+1. Enter the following to install Docker:
+sudo yum -y install docker
+
+2. Enter the command below to start Docker as a service:
+sudo systemctl start docker
+
+3. Verify Docker is running by entering:
+sudo docker info
+
+This will output system-wide information about Docker. The information will resemble the following:
+
+Summary 
+In this Lab Step, you added the official Docker CE repositories to the yum package manager and installed Docker CE. You also learned your first Docker command to print system-wide information relevant to Docker.
+-----------------------------------------------
+Using Docker without Root Permission on Linux
+=============================================
+Introduction
+In the last Lab Step, you used root permissions to run a Docker command. In this Lab Step you will learn how to use Docker commands without elevating to root permissions. This may not always be what you want and should only be performed for trusted users. This is because the actions are equivalent to granting root permissions to a user. It will be convenient in the following Lab Steps to not have to enter sudo for every command.
+
+Instructions
+1. Try entering the same command without using root permission:
+docker info
+
+Server:
+ERROR: Got permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Get "http://%2Fvar%2Fru
+n%2Fdocker.sock/v1.24/info": dial unix /var/run/docker.sock: connect: permission denied
+errors pretty printing info
+
+By default, the Docker daemon will reject requests from users that aren't part of the docker group. If you encounter this message in your travels, you can either use root permission or add your user to the docker group.
+
+2. Verify the docker group exists by searching for it in the groups file:
+
+[ec2-user@ip-10-0-0-39 ~]$ grep docker /etc/group
+docker:x:993:
+
+If you don't see a line beginning with "docker:", you will need to add the group yourself by entering:
+
+[ec2-user@ip-10-0-0-39 ~]$ sudo groupadd docker
+groupadd: group 'docker' already exists
+
+3. Add your user to the docker group:
+[ec2-user@ip-10-0-0-39 ~]$ sudo gpasswd -a $USER docker
+Adding user ec2-user to group docker
+
+The groups of the currently logged in user is cached, you can verify this by entering groups.
+
+4. You can login again to have your groups updated by entering:
+newgrp docker
+
+Now you will have docker in your list of groups if you enter groups.
+
+Note: It is convenient to not have to terminate your current ssh session by using newgrp, but terminating the ssh session and logging in again will work just as well.
+
+5. Verify that your user can successfully issue Docker commands by entering:
+[ec2-user@ip-10-0-0-39 ~]$ docker info
+
+
+Note: if you don't see the system-wide Docker information, you may need to restart the Docker daemon by entering sudo systemctl restart docker.
+
+Summary 
+In this Lab Step, you learned about the docker group which has permisison to issue Docker commands. You also learned how to add your user to the group.
+-----------------------------------------------------------------
+Getting Docker Help from the Command Line
+==========================================
+Introduction
+In this Lab Step, you will learn about how Docker commands are organized and how to get help for commands on the command line.
+
+You use each with a different syntax. For a common command, the usage is:
+
+docker command-name [options] 
+
+and the usage for a management group command is:
+
+docker management-group command-name [options]
+
+Instructions
+1. To see a list of the commands in Docker, simply enter:
+
+docker --help
+
+2. Enter the following management command:
+docker system info
+
+The output should look familiar. That is because info is a common command that you used in the last Lab Step (docker info) to see the same system-wide information.
+
+3. To see all of the commands grouped under system, enter:
+docker system --help
+
+Notice the info command previously entered.  events is a common command, but df and prune are only available through the system management command.  You can use df to see the disk usage for Docker and prune to clean up unused data. 
+
+Using the --help you can explore everything there is to know about Docker commands. To prepare for the upcoming Lab Steps, you will now focus in on a few important components.
+
+4. To view the commands grouped with images, enter:
+docker image --help
+
+Images are read-only snapshots that containers can be created from. Images are built up in layers, one image built on top of another. Because each layer is read-only, they can be identified with cryptographic hash values computed from the bytes of the data. Layers can be shared between images as another benefit of being read-only. You can, and will later, build your own images. The build command accomplishes that. When you build your own image, you will select a base image to build on top of with your custom application. A pull can be used to pull or download an image to your server from an image registry, while push can upload an image to a registry. Read through the other command descriptions so you are aware of what else is available.
+
+5. To view the commands grouped with containers, enter:
+docker container --help
+
+A container is another core concept in Docker. Containers run applications or services, almost always just one per container. Containers run on top of an image. In terms of storage, a container is like another layer on top of the image, but the layer is writable instead of read-only. You can have many containers using the same image. Each will use the same read-only image and have its own writable layer on top. Containers can be used to create images using the commit command, essentially converting the writable layer to a read-only layer in an image. 
+
+The relationship between images and containers aside, run is used to run a command on top of an image. A container can be stopped and started again. ls is used to list containers. It is aliased to ps and list as well. Read through the other commands in the list to see what else is available for working with containers. 
+
+---------------------------------------------------------------------
+Running Your First Docker Container
+=====================================
+containers run a command on top of an image. There are many available images to choose from. Images are collected in repositories. A repository can have many versions of an image. Tags are used to manage versions. You will use images from repositories inside the default Docker Registry, Docker Hub. Docker Hub hosts official images as well as community-contributed images. Docker Hub offers free and paid accounts. You get an unlimited amount of public repositories and one free private repository with the free account.
+
+Instructions
+1. Enter the following to see how easy it is to get a container running:
+docker run hello-world
+
+Docker took the following steps:
+ 1. The Docker client contacted the Docker daemon.
+ 2. The Docker daemon pulled the "hello-world" image from the Docker Hub.
+    (amd64)
+ 3. The Docker daemon created a new container from that image which runs the
+    executable that produces the output you are currently reading.
+ 4. The Docker daemon streamed that output to the Docker client, which sent it
+    to your terminal.
+	
+but what was the command? You only specified the image name, hello-world. The image provides a default command in this case which prints the output you see.
+
+2. Re-run the same command:
+docker run hello-world
+
+Notice this time the Docker output is not included. That is because the specific version of the image was found locally and there is no need to pull the image again.
+
+3. Try running a more complex container with some options specified:
+docker run --name web-server -d -p 8080:80 nginx:1.12
+
+[ec2-user@ip-10-0-0-39 ~]$ docker run --name web-server -d -p 8080:80 nginx:1.12
+Unable to find image 'nginx:1.12' locally
+1.12: Pulling from library/nginx
+f2aa67a397c4: Pull complete 
+e3eaf3d87fe0: Pull complete 
+38cb13c1e4c9: Pull complete 
+Digest: sha256:72daaf46f11cc753c4eab981cbf869919bd1fee3d2170a2adeac12400f494728
+Status: Downloaded newer image for nginx:1.12
+40bb2763b8c441f87558c29ccd9c55fcf5709e27683cdeaef0e46cb64efe4bed
+
+[ec2-user@ip-10-0-0-39 ~]$ docker images
+REPOSITORY    TAG       IMAGE ID       CREATED        SIZE
+hello-world   latest    d1165f221234   5 months ago   13.3kB
+nginx         1.12      4037a5562b03   3 years ago    108MB
+
+This time you specified the tag 1.12 indicating you want version 1.12 of nginx instead of the default latest version. There are three Pull complete messages this time, indicating the image has three layers. The last line is the id of the running container. The meanings of the command options are:
+
+--name container_name: Label the container container_name. In the command above, the container is labeled web-server. This is much more manageable than the id, 31f2b6715... in the output above.
+-d: Detach the container by running it in the background and print its container id. Without this, the shell would be attached to the running container command and you wouldn't have the shell returned to you to enter more commands.
+-p host_port:container_port: Publish the container's port number container_port to the host's port number host_port. This connects the host's port 8080 to the container port 80 (http) in the nginx command.
+
+4. Verify the web server is running and accessible on the host port of 8080:
+curl localhost:8080
+
+This command sends an HTTP GET request (a standard web browser request) to localhost port 8080. You will be returned an HTML document, which is the default nginx web page, 
+
+5. To list all running containers, enter:
+
+docker ps
+
+[ec2-user@ip-10-0-0-39 ~]$ docker ps
+CONTAINER ID   IMAGE        COMMAND                  CREATED         STATUS         PORTS                                   NAMES
+40bb2763b8c4   nginx:1.12   "nginx -g 'daemon of…"   6 minutes ago   Up 6 minutes   0.0.0.0:8080->80/tcp, :::8080->80/tcp   web-server
+
+
+The (truncated) container id is the same as the last line of the docker run output. One new thing is that you can see the command that is running in the container in the third column. The friendly name you specified is in the last column.
+
+6. Enter the following to see a list of all running and stopped containers:
+docker ps -a
+
+This time you can see the two hello-world containers from the start of the Lab Step. They simply wrote a message and then stopped when the command finished, whereas the nginx server is always listening for requests until you stop it. Notice that Docker automatically assigned random friendly names for the hello-world containers, musing_volard, and jovial_snyder in the image above. These names are useful if you need to reference a container that you didn't assign a name to by yourself.
+
+
+[ec2-user@ip-10-0-0-39 ~]$ docker ps -a
+CONTAINER ID   IMAGE         COMMAND                  CREATED          STATUS                      PORTS                                
+   NAMES
+40bb2763b8c4   nginx:1.12    "nginx -g 'daemon of…"   6 minutes ago    Up 6 minutes                0.0.0.0:8080->80/tcp, :::8080->80/tcp
+   web-server
+9a9ffa6660af   hello-world   "/hello"                 10 minutes ago   Exited (0) 10 minutes ago                                        
+   hardcore_ishizaka
+b628d493c9a9   hello-world   "/hello"                 14 minutes ago   Exited (0) 14 minutes ago                                        
+   elegant_einstein
+1f97598855b1   hello-world   "/hello"                 22 minutes ago   Exited (0) 22 minutes ago                                        
+   distracted_chatelet
+
+7. To stop the nginx server, enter:
+docker stop web-server
+
+8. Verify the server is no longer running by running:
+docker ps
+
+9. To start running the command in the web-server container again, enter:
+docker start web-server
+
+This is different from re-running the original docker run command, which would make a second container running the same command instead of using the stopped container.
+
+10. To see the container's output messages, enter:
+docker logs web-server
+
+Docker logs messages written to standard output and standard error. In the case of nginx, it writes a line for each request that it receives.
+
+11. You can run other commands in a running container. For example, to get a bash shell in the container enter:
+docker exec -it web-server /bin/bash
+
+Which will cause your shell prompt to change to something similar to:  root@40bb2763b8c4:/# 
+
+This indicates you are at a shell prompt in the container using the root container user. The -it options tell Docker to handle your keyboard events in the container. Enter some commands to inspect the container environment, such as ls and cat /etc/nginx/nginx.conf. When finished, enter exit to return to the VM ssh shell. Your shell prompt should change to confirm you are no longer in the container bash shell.
+
+You were able to connect to a bash shell because the nginx image has a Debian Linux layer which includes bash. Not all images will include bash, but exec can be used to run any supported command in the container.
+
+12. To list the files in the container's /etc/nginx directory, enter:
+docker exec web-server ls /etc/nginx
+
+This runs the ls command and returns to the ssh shell prompt without using a container shell to execute the command.
+
+13. Stop the nginx container:
+docker stop web-server
+
+14. Search for an image that you don't know the exact name of, say an image for Microsoft .NET Core, by entering:
+docker search "Microsoft .NET Core"
+
+This searches Docker Hub for images related to the string provided. In this case, the top results related to .NET Core are returned:
+
+---------------------------------------------------------------------------
+Creating Your First Docker Image
+=================================
+Introduction
+Docker containers run on top of images. You have seen how to use images on Docker's public registry, the Docker Hub. There are many different images available. It is worth trying to find existing images when you can. Inevitably, you will need to create your own images when making your own applications. In that case, you will still want to invest time into finding the right base layer to add your own layer(s) on top of.
+
+There are a couple of ways to make images. You can use docker commit to create an image from a container's changes. The changes may come from using exec to open a shell in the container like in the previous Lab Step. The other method is using a Dockerfile. A Dockerfile is easier to maintain, easier to repeatedly create images from, and distributions easier. You will create a Dockerfile in this Lab Step. Just know that it is possible to create equivalent images using commits.
+
+Dockerfiles specify a sequence of instructions. Instructions can install software, expose network ports, set the default command for running a container using the image, and other tasks. Instructions can really handle anything required to configure the application. Many of the instructions add layers. It is usually a good idea to keep the number of layers to a reasonable number. There is overhead with each layer, and the total number of layers in an image is limited. When the Dockerfile is ready, you can create the image using the docker build command.
+
+You will see how all of this comes together by creating an image of a Python Flask web app that randomly chooses what type of Cloud Academy content you should look at next. The choice of Python as the example app is arbitrary. You will not focus on the specifics of the programming language. You should be able to repeat the process for any other programming language by following a similar process. Whatever programming language or framework you are working with, you should consult the Docker Hub documentation for the image, as it will usually include advice on how to structure your Dockerfile.
+
+Instructions
+1. Install Git:
+sudo yum -y install git
+
+You will clone a code repository with the Flask app using Git.
+2. Clone the code repository to your virtual machine:
+git clone https://github.com/cloudacademy/flask-content-advisor.git
+
+3. Change to the apps directory:
+cd flask-content-advisor
+
+4. Create and start editing a Dockerfile using the vi text editor:
+vi Dockerfile
+
+Note: The name of the Dockerfile must be Dockerfile with an uppercase "D" and all other letters lowercase
+
+5. Enter the following in the file:
+
+# Python v3 base layer
+FROM python:3
+
+# Set the working directory in the image's file system
+WORKDIR /usr/src/app
+
+# Copy everything in the host working directory to the container's directory
+COPY . .
+
+# Install code dependencies in requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Indicate that the server will be listening on port 5000
+EXPOSE 5000
+
+# Set the default command to run the app
+CMD [ "python", "./src/app.py" ]
+
+
+FROM sets the base layer image
+COPY . . copies all of the files in the code repository into the container's /usr/src/app directory
+RUN executes a command in a new layer at the top of the image
+EXPOSE only indicates what port the container will be listening on, it doesn't automatically open the port on the container
+CMD sets the default command to run when a container is made from the image
+
+
+7. Build the image from the Dockerfile:
+docker build -t flask-content-advisor:latest .
+
+The -t tells Docker to tag the image with the name flask-content-advisor and tag latest. The . at the end tells Docker to look for a Dockerfile in the current directory. Docker will report what it's doing to build the image. Each instruction has its own step. Steps one and four take longer than the others. Step one needs to pull several layers for the Python 3 base layer image and Step four downloads code dependencies for the Flask web application framework. Notice that each Step ends with a notice that an intermediate container was removed. Because layers are read-only, Docker needs to create a container for each instruction. When the instruction is complete, Docker commits it to a layer in the image and discards the container.
+
+8. Record your VM's public IP address:
+curl ipecho.net/plain; echo
+
+[ec2-user@ip-10-0-0-39 flask-content-advisor]$ curl ipecho.net/plain; echo
+54.245.179.191
+
+You will need your IP to test that the web app is available with your browser.  The echo is only to put the shell prompt on a new line.
+
+9. Open a new browser tab and navigate to the public IP address you just recorded. The browser will fail to load anything since no server is running yet. Keep the tab open for later.
+
+http://54.245.179.191/
+
+10. Now you can run a container using the image you just built:
+docker run --name advisor -p 80:5000 flask-content-advisor
+
+This runs a container named advisor and maps the container's port 5000 to the host's port 80 (http).
+This time you didn't include -d to run in detached mode.  That is why you see output and you don't have the shell prompt returned to you. If you did run with -d, you could get the same information from docker logs.
+
+11. Return to your browser tab with the public IP and refresh the page:
+http://54.245.179.191/
+
+12. Return to the shell and notice that some web requests will have been logged corresponding to your browser requests:
+
+[ec2-user@ip-10-0-0-39 flask-content-advisor]$ docker run --name advisor -p 80:5000 flask-content-advisor
+ * Running on all addresses.
+   WARNING: This is a development server. Do not use it in a production deployment.
+ * Running on http://172.17.0.3:5000/ (Press CTRL+C to quit)
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 424-818-076
+49.37.48.21 - - [29/Aug/2021 18:31:11] "GET / HTTP/1.1" 200 -
+49.37.48.21 - - [29/Aug/2021 18:31:12] "GET /favicon.ico HTTP/1.1" 404 -
+49.37.48.21 - - [29/Aug/2021 18:31:38] "GET / HTTP/1.1" 200 -
+49.37.48.21 - - [29/Aug/2021 18:31:43] "GET / HTTP/1.1" 200 -
+49.37.48.21 - - [29/Aug/2021 18:31:44] "GET / HTTP/1.1" 200 -
+49.37.48.21 - - [29/Aug/2021 18:31:45] "GET / HTTP/1.1" 200 -
+49.37.48.21 - - [29/Aug/2021 18:31:46] "GET / HTTP/1.1" 200 -
+49.37.48.21 - - [29/Aug/2021 18:31:46] "GET / HTTP/1.1" 200 -
+49.37.48.21 - - [29/Aug/2021 18:31:47] "GET / HTTP/1.1" 200 -
+
+CTRL+C to stop.
+
+[ec2-user@ip-10-0-0-39 flask-content-advisor]$ docker start advisor
+advisor
+[ec2-user@ip-10-0-0-39 flask-content-advisor]$ docker ps
+CONTAINER ID   IMAGE                   COMMAND                  CREATED          STATUS          PORTS                                  
+ NAMES
+55d1f42a3547   flask-content-advisor   "python ./src/app.py"    6 minutes ago    Up 16 seconds   0.0.0.0:80->5000/tcp, :::80->5000/tcp  
+ advisor
+40bb2763b8c4   nginx:1.12              "nginx -g 'daemon of…"   46 minutes ago   Up 46 minutes   0.0.0.0:8080->80/tcp, :::8080->80/tcp  
+ web-server
+ 
+ 
+
+
+Docker Compose
+================================
+- create an env with 2 services, 1st service is for user UI, 2nd service is for persisting into Disk. have 2 separate Dockerfile.
+- we want network isolations these container from other containers running on the host.
+- useing a user defined network gives access to automatic DNS resolution from container anmes to IP addessres 
+
+$ docker network create --driver bridge app_network
+
+- for service B, we need to follow best pratctice for us to easily setup and migrate, can be shared among multiple containers. flexibility to store on remote cloud.
+
+$ docker volume create serviceB_volume
+
+$ docker build -f Dockerfile.serviceA .
+$ docker build -f Dockerfile.serviceB .
+
+$ docker run -d -name serviceA --netwrok app_network \
+-p 8080:3000 serviceA
+
+
+$ docker run -d -name serviceB --netwrok app_network \
+--mount source=serviceB_volume,target=/data serviceB
+
+
+- after test, tear down these containers.
+
+	$ docker stop serviceA serviceB
+
+	- once the containers are stopped, will be able to remove the containers
+
+	$ docker rm serviceA serviceB
+
+	- now remove the images
+
+	$ docker rmi serviceA serviceB
+
+	- now safely delete the volume
+	
+	$ docker volume rm serviceB_volume
+	
+	- remove the dedicated bridge network
+	
+	# docker network rm app_network
+	
+
+- Root elements are: 
+version: '3'
+services:
+volumes:
+networks:
+
+services:
+	web:
+		image: app
+		ports:
+			- "5000:5000"
+		depends_on: 
+			- redis
+	redis:
+		image: redis
+		
+- docker run params like -d to run as detach mode, --rm to cleanup the containet on exit are specified through the command line interface and not in compose file.
+
+- to add version of images in compose file, do not add space after :, dont need within double/single quotes ('redis:4.0.6') as ':' mean special meaning only if it has a space after it.
+services:
+	app-cache:
+		image: redis:4.0.6
+		
+- incase, we want to expose redis outside of host. needs dounble/single quotes as : between number get treated as hex numbers in yaml.
+$ docker run --name app-cache -p 6379:6379 redis:4.0.6
+version: '3'
+services:
+	app-cache:
+		image: redis:4.0.6
+		ports:
+		- '6379:6379'
+
+			
+- command is added to override the default command in docker run
+$ docker run --name app-cache -p 6379:6379 redis:4.0.6 redis-server --appendonly yes
+version: '3'
+services:
+	app-cache:
+		image: redis:4.0.6
+		ports:
+		- '6379:6379'
+		command: redis-server --appendonly yes
+		
+OR
+version: '3'
+services:
+	app-cache:
+		image: redis:4.0.6
+		ports:
+		- '6379:6379'
+		command: ["redis-server", "--appendonly", "yes"]
+
+OR
+version: '3'
+services:
+	app-cache:
+		image: redis:4.0.6
+		ports:
+		- '6379:6379'
+		command: 
+		- "redis-server"
+		- "--appendonly"
+		- "yes"
+
+- Volumes
+version: '3'
+services:
+	app-cache:
+		image: redis:4.0.6
+		volumes:
+			# names volumes i.e. maps named-volume of docker volume to /data directory withing container
+			- named-volume:/data
+			# compose file relative path
+			- ./cache:/tmp/cache
+			# auto create a volume on docker and maps to /tmp/stuff path of container 
+			- /tmp/stuff
+volumes:
+	named-volume:
+	external-volume:
+		external: true
+		
+
+- Networks
+- bydefault compose will automatically create a new bridge network and associate all the containers to it.
+- name of that default network: name of the directory where componse file is in, 'default' appended at the end
+- compose file default network
+version: '3'
+services:
+	web:
+		image: "my-app"
+	cache:
+		image: redis:9.0.4
+		ports:
+		- "36379:6379"
+- Here: cache can reach web using http://web:80 (assume web runs on port 80 within container), web can reach cache using http://cache:6379. on the host machine, cache can be reached using redis://localhost:36379
+- we can create custom network under the root networks key. gives more control and allows to create more complex network topology. external: true to tell the compose to verify and join the same external network if already exists
+	
+serives:
+	proxy:
+		image: repo/proxy
+		networks:
+		- frontend
+	cache:
+		image: redis
+		networks:
+			backend:
+				aliases:
+				- database
+	web:
+		image: app
+		networks:
+		- frontend
+		- backend
+networks:
+	frontend:
+	backend:
+		external: true
+		
+- Here: frontend network is the default bridge network which the compose will be creating, the backend is a separate network which would have been created outside of the compose file.
+
+- Docker compose file can substitute shell environment variables using $VARIABLE_NAME or ${VARIABLE_NAME}
+services:
+	cache:
+		image: redis:${REDIS_TAG}
+
+export REDIS_TAG=4.0.6
+
+- Extension fields:
+	- reuse config fragments. compose file version 3.4+
+	- root keys begin with x-
+	- use YAML anchors
+	
+version: '3.4'
+x-logging:
+	&default-logging:
+	options:
+		max-size: '10m'
+		max-file: 7
+	driver: json-file
+services:
+	web:
+		image: my-app
+		logging: *default-logging
+	cache:
+		image: redis:4.0.6
+		logging: *default-logging
+		
+- Here: default-logging is reusable fragment, used YAML anchor & and its reused using YAML anchor * in web and cache container.
+
+
+Docker Compose CLI
+============================
+docker-compose Usage
+----------------------------
+- docker-compose [OPTIONS] [COMMAND] [ARGS]
+- connects to Docker daemon on the host by default
+	- Can connect to remote hosts with -H
+	- Secure remote connection with --tls* option
+	
+- the default compose file named docker-compose.(yml|yaml) 
+	- -f to specify any named file that we want docker-compose CLI to process.
+
+- each isolated aplication is associated with a project in compose, the project is given a name and and that appears in the resources that get created by compose. ex: names of networks of the containers begins the project name followed by the arbitary key declared in the compose file.
+
+- Use the name of the directory in which the compose file present, is the default project name.
+- use -p option to assign a custom project name.
+
+
+
+docker-compose Commands
+----------------------------
+- Many generalize familiar docker command:
+build, config, create, events, exec, images, kill, logs, pause, port, ps, pull, push, restart , rm, run, start, stop, top, version, up, down
+
+- ex: stop command with docker stops the container for the given container_name, $ docker stop <container_name>, similarly, docker-compose stop, stops all the containers declared on compose file unless we pass the specific container_name.
+
+- containers crated by docker-compose are listed using docker-compose ps command.
+
+- up command: performs the action required to instantiate containers described in compose file. It starts by creating default and named network as applicable and any named volumes. then it used build, create, start, attach to service containers to bringup the containers.
+
+- down command: is opposite of up. removes service containers, named and default networks. leaves volumes and images by default which was created during UP command.
+
+$ docker-compose --help | more
+
+
+$ docker-compose up --help
+- pass --no-deps to prevent starting dependent services.
+- pass --remove-orphans to cleanup services that are no longer declared in compose file due to fact we renamed/removed in newer compose file.
+
+
+$ docker-compose config
+- to lint and debug any config related errors in compose file.
+
+1-extension-fields.yml
+version: '3.4'
+x-logging: 
+  &default-logging
+  options:
+    max-size: '10m'
+    max-file: 7
+  driver: json-file
+services:
+  web:
+    image: my-app
+    logging: *default-logging
+  cache:
+    image: redis:${REDIS_VERSION}
+    command: [redis-server, --append-only, yes]
+    logging: *default-logging
+	
+$ docker-compose -f 1-extension-fields.yml config  -- reports error: services.cache.command contains true, which is invalid type. should be string.
+
+D:\work\learn\docker-kubernetes\docker-compose>docker-compose -f 1-extension-fields.yml config
+ERROR: The Compose file '.\1-extension-fields.yml' is invalid because:
+services.cache.logging contains an invalid type, it should be an object
+services.web.logging contains an invalid type, it should be an object
+services.cache.command contains true, which is an invalid type, it should be a string
+
+- other than true/false, yes/no are also treated as boolean in yaml file. changing to 'yes' solve this issue.
+- this prints the entire compose file after replacing the placeholder used via docker extensons.
+
+D:\work\learn\docker-kubernetes\docker-compose>docker-compose -f 1-extension-fields.yml config
+WARNING: The REDIS_VERSION variable is not set. Defaulting to a blank string.
+services:
+  cache:
+    command:
+    - redis-server
+    - --append-only
+    - "yes"
+    image: 'redis:'
+    logging:
+      driver: json-file
+      options:
+        max-file: 7
+        max-size: 10m
+  web:
+    image: my-app
+    logging:
+      driver: json-file
+      options:
+        max-file: 7
+        max-size: 10m
+version: '3.4'
+
+- as it shows warning, after we set REDIS_VERSION, look at this: <image: 'redis:'> above which is wrong
+
+D:\work\learn\docker-kubernetes\docker-compose>set REDIS_VERSION=4.0.6
+
+D:\work\learn\docker-kubernetes\docker-compose>docker-compose -f 1-extension-fields.yml config
+services:
+  cache:
+    command:
+    - redis-server
+    - --append-only
+    - "yes"
+    image: redis:4.0.6
+    logging:
+      driver: json-file
+      options:
+        max-file: 7
+        max-size: 10m
+  web:
+    image: my-app
+    logging:
+      driver: json-file
+      options:
+        max-file: 7
+        max-size: 10m
+version: '3.4'
+
+
+
+Deploying and Configuring a Web Application with Compose
+------------------------------------------------------------
+- Open VS code and its terminal (either cmd or powershell).
+- sample wordpress webapp writte in php+mysql DB, images for wordpress and mysql is present in DockerHub
+- the default project_name of docker-compose is: the directory where compose file present. ex: here, webapp
+
+wordpress.yml
+
+version: '3'
+services:
+   db:
+     image: mysql:5.7
+     volumes:
+       - db_data:/var/lib/mysql
+     restart: always
+     environment:
+       MYSQL_ROOT_PASSWORD: somewordpress
+       MYSQL_DATABASE: wordpress
+       MYSQL_USER: wordpress
+       MYSQL_PASSWORD: wordpress
+   wordpress:
+     depends_on:
+       - db
+     image: wordpress:4.9.0
+     ports:
+       - "8000:80"
+     restart: always
+     environment:
+       - WORDPRESS_DB_HOST=db:3306
+       - WORDPRESS_DB_USER=wordpress
+       - WORDPRESS_DB_PASSWORD=wordpress
+volumes:
+    db_data: 
+	
+
+$ D:\work\learn\docker-kubernetes\docker-compose\docker-compose-training-master\webapp>docker-compose -f wordpress.yml up
+
+Creating network "webapp_default" with the default driver
+Creating volume "webapp_db_data" with default driver
+Pulling db (mysql:5.7)...
+5.7: Pulling from library/mysql
+..
+..
+Status: Downloaded newer image for wordpress:4.9.0
+Creating webapp_db_1 ... done
+Creating webapp_wordpress_1 ... done
+Attaching to webapp_db_1, webapp_wordpress_1
+..
+..
+
+- docker-compose separates the logs by each containers using color codes, easy to monitor in VS code terminal.
+- we will see some errors: wordpress_1  | MySQL Connection Error: (2002) Connection refused
+- this is because, even though we added depends_on but this is just sequencing docker-compose instuctions to start the instruction rather making  containers to wait untill the dependent containers are started.
+
+db_1         | 2021-09-07T07:00:25.214611Z 0 [Note] mysqld: ready for connections.
+
+- CTRL+Z to stop the docker-compose command and keep the underlying container running.
+
+$ docker images ls
+$ docker container ls
+$ docker network ls
+
+- run docker-compose with -d option.
+D:\work\learn\docker-kubernetes\docker-compose\docker-compose-training-master\webapp>docker-compose -f wordpress.yml up -d
+Starting webapp_db_1 ... done
+Starting webapp_wordpress_1 ... done
+
+$ docker network ls
+NETWORK ID     NAME             DRIVER    SCOPE
+c94f2b897514   bridge           bridge    local
+89bee5d59760   host             host      local
+365af69fde50   none             null      local
+f3d205fe43f3   webapp_default   bridge    local
+
+
+$ docker ps
+CONTAINER ID   IMAGE             COMMAND                  CREATED             STATUS         PORTS
+                      NAMES
+4aa92cba0882   wordpress:4.9.0   "docker-entrypoint.s…"   About an hour ago   Up 3 minutes   0.0.0.0:8000->80/tcp, :::8000->80/tcp   webapp_wordpress_1
+a77c16149950   mysql:5.7         "docker-entrypoint.s…"   About an hour ago   Up 3 minutes   3306/tcp, 33060/tcp                     webapp_db_1
+
+
+$ docker container ls  
+CONTAINER ID   IMAGE             COMMAND                  CREATED             STATUS         PORTS
+                      NAMES
+4aa92cba0882   wordpress:4.9.0   "docker-entrypoint.s…"   About an hour ago   Up 3 minutes   0.0.0.0:8000->80/tcp, :::8000->80/tcp   webapp_wordpress_1
+a77c16149950   mysql:5.7         "docker-entrypoint.s…"   About an hour ago   Up 3 minutes   3306/tcp, 33060/tcp                     webapp_db_1
+
+
+$ docker volume ls   
+DRIVER    VOLUME NAME
+local     2a5c5d2150a7acd87f0948aecd1eb86cefdb70c16941f81f2122b344b0b5817b
+local     c3b72204a79f3cdc01aa5a449b6f0c1e7720376b6d74a51bff13f3466c8394a8
+local     webapp_db_data
+
+
+- Now access http://localhost:8000/ on browser
+Site Title: Docker Composing
+Usename: composer
+password: composer
+email: composer@gmail.com
+
+after login, get redirected to http://localhost:8000/wp-admin/
+
+D:\work\learn\docker-kubernetes\docker-compose\docker-compose-training-master\webapp>docker-compose -f wordpress.yml up -d
+Pulling wordpress (wordpress:latest)...
+latest: Pulling from library/wordpress
+f8416d8bac72: Pull complete
+..
+.
+.
+9401cf44b3d4: Pull complete
+Digest: sha256:067833b1827e3f035c2c6b4be5336bf5bef498dafeb4f2d18258e439fa90c6f7
+Status: Downloaded newer image for wordpress:latest
+webapp_db_1 is up-to-date
+Recreating webapp_wordpress_1 ... done
+
+- here in above, a check to webapp_db_1 was done to see if there is any changes. use docker-compose with '--no-deps wordpress' to avoid making any checks.
+
+
+D:\work\learn\docker-kubernetes\docker-compose\docker-compose-training-master\webapp>docker-compose -f wordpress.yml down 
+Stopping webapp_wordpress_1 ... done
+Stopping webapp_db_1        ... done
+Removing webapp_wordpress_1 ... done
+Removing webapp_db_1        ... done
+Removing network webapp_default
+
+run below to confirm:
+$ docker ps
+$ docker container ls
+$ docker network ls
+
+- NOTE: docker-compose down does not remove the volumes by-default
+
+D:\work\learn\docker-kubernetes\docker-compose\docker-compose-training-master\webapp>docker-compose -f wordpress.yml up -d 
+Creating network "webapp_default" with the default driver
+Creating webapp_db_1 ... done
+Creating webapp_wordpress_1 ... done
+
+
+- docker-compose with '--rmi all --volumes --remove-orphans' removes all images/volumes.
+
+D:\work\learn\docker-kubernetes\docker-compose\docker-compose-training-master\webapp>docker-compose -f wordpress.yml down --rmi all --volumes --remove-orphans
+Stopping webapp_wordpress_1 ... done
+Stopping webapp_db_1        ... done
+Removing webapp_wordpress_1 ... done
+Removing webapp_db_1        ... done
+Removing network webapp_default
+Removing volume webapp_db_data
+Removing image mysql:5.7
+Removing image wordpress:latest
+
+D:\work\learn\docker-kubernetes\docker-compose\docker-compose-training-master\webapp>docker volume ls  
+DRIVER    VOLUME NAME
+local     2a5c5d2150a7acd87f0948aecd1eb86cefdb70c16941f81f2122b344b0b5817b
+local     c3b72204a79f3cdc01aa5a449b6f0c1e7720376b6d74a51bff13f3466c8394a8
+
+- we can see the old wordpress:4.9.0 is still there. use 'docker image prune -a' command to any images that are left over.
+D:\work\learn\docker-kubernetes\docker-compose\docker-compose-training-master\webapp>docker image ls
+REPOSITORY          TAG       IMAGE ID       CREATED        SIZE
+docker101tutorial   latest    d660cefd81ed   3 weeks ago    28.2MB
+alpine/git          latest    b8f176fa3f0d   3 months ago   25.1MB
+hello-world         latest    d1165f221234   6 months ago   13.3kB
+wordpress           4.9.0     467f492bc127   3 years ago    413MB
+
+D:\work\learn\docker-kubernetes\docker-compose\docker-compose-training-master\webapp>docker image prune -a
+WARNING! This will remove all images without at least one container associated to them.
+Are you sure you want to continue? [y/N] y
+Deleted Images:
+untagged: wordpress:4.9.0
+untagged: wordpress@sha256:937862438b4f2a6b56193ef2cfd5fe345566e51278be56a04a7dfcdde18c5922
+deleted: sha256:467f492bc127ddf79749ad571139b36844e31df43e483b08e38bee3e4fedb8d1
+..
+..
+..
+Total reclaimed space: 412.6MB
+
+
+
+Building in Docker Compose during code development
+-------------------------------------------------------
+- so far we have seem compose using images pulled from docker registry. The intention is to keep the development env exactly same to the deployment env (DEV/Test/Prd) by using the development image to bundle up all the dependencies and all we need on our development nachine is the src files, we dont need the dependecies installed locally.
+- by relying on the image for dependencies, we are step closer having paroty between development and Production because the prd env. will be using the same images dependencies, the chance of the code working on development machine and in prd is greately reduced.
+
+How do we build images using compose?
+
+- Building in docker-compose use Dockerfile for image build instructions just like docker build.
+- compose file 'build' key instead of 'image' key.
+- 2 forms;
+1/  -- assumes the dir contains the Dockerfile
+build: ./<dir_name>
+
+2/
+build:
+	context: ./<dir_name>
+	dockerfile: <filename>
+	args:
+		buildno: 1
+
+
+- docker-compose up command will build any image for services that dont have already build, susequest up command wont rebuild the image, unless we pass --build option i.e. always build images.
+
+- 'docker-compose build' command will build or re/builds images without starting the containers, just like docker build.
+- 'docker-compose build --no-cache'  ----> causes ignore the docker image layered cache and hence rebuilds all the layers from scratch.
+- 'docker-compose build --pull'  ----> will always pull the base image described on the Dockerfile.
+
+- Demo project: https://github.com/cloudacademy/docker-compose-training/tree/master/building
+
+- dev.dockerfile
+
+# Node.js version 8 base image
+FROM node:8
+
+# use nodemon for development
+RUN npm install --global nodemon
+
+# install package.json dependencies
+RUN mkdir src
+WORKDIR /src
+ADD src/package.json /src/package.json
+RUN npm install
+
+# Development app runs on port 3000
+EXPOSE 3000
+
+# Run server and watch for changes
+CMD ["nodemon", "-L", "/src/app/bin/www"]
+
+- here, nodemon is a tool which to server to detect any change and refresh automatically., exposed port 3000 of container but not bind to host port yet. CMD is for telling nodemon to keep watching the location (/src/app/bin/www) for any code changes, but where is the files under /src/app/bin/www, we have not copied anything, which is where instead of copying the code everytime, we will mount ./src of local location to "/src/app/bin/www"
+
+
+- dev.docker-compose.yml
+
+version: '3'
+services:
+  app:
+    build:
+      context: .
+      dockerfile: dev.dockerfile
+    image: accumulator
+    ports:
+      - '3000:3000'
+    environment:
+      - NODE_ENV=development
+      - DB_HOST=app-db
+    volumes:
+      - './src:/src/app'
+    depends_on:
+      - app-db
+    networks:
+      - backend
+  app-db:
+    image: mongo:3
+    networks:
+      - backend
+networks:
+  backend:
+
+- here, we are actually creating a bind volume (relative path) with the ./src of local host to /src/app of container, and hence the src code from local development machine will be mapped to the running container.
+- build.context says the current dir is the build context where the dockerfile named dev.dockerfile is present.
+- image key is to give a name to the built image i.e. 'accumulator'
+
+
+D:\work\learn\docker-kubernetes\docker-compose\docker-compose-training-master\building>docker-compose -f dev.docker-compose.yml up -d
+Creating network "building_backend" with the default driver
+Pulling app-db (mongo:3)...
+3: Pulling from library/mongo
+..
+..
+..
+ => [2/6] RUN npm install --global nodemon                                                              17.4s 
+ => [3/6] RUN mkdir src                                                                                  0.7s 
+ => [4/6] WORKDIR /src                                                                                   0.0s 
+ => [5/6] ADD src/package.json /src/package.json                                                         0.1s 
+ => [6/6] RUN npm install                                                                               39.0s 
+ => exporting to image                                                                                   1.8s 
+ => => exporting layers                                                                                  1.8s 
+ => => writing image sha256:7500d39f7833145ce6a69535a4f08181ca22937b9000037c2707c5951992ba2c             0.0s 
+ => => naming to docker.io/library/accumulator                                                           0.0s 
+
+Use 'docker scan' to run Snyk tests against images to find vulnerabilities and learn how to fix them
+WARNING: Image for service app was built because it did not already exist. To rebuild this image you must use 
+`docker-compose build` or `docker-compose up --build`.
+Creating building_app-db_1 ... done
+Creating building_app_1    ... done
+
+
+D:\work\learn\docker-kubernetes\docker-compose\docker-compose-training-master\building>docker-compose -f dev.docker-compose.yml down
+Stopping building_app_1    ... done
+Stopping building_app-db_1 ... done
+Removing building_app_1    ... done
+Removing building_app-db_1 ... done
+Removing network building_backend
+
+
+
+
+How Compose Handles and Combines Multiple Files
+----------------------------------------------------------------
+https://github.com/cloudacademy/docker-compose-training/tree/master/multi-env
+
+- Using compose for multiple environments.
+- we saw how compose is used to build an image ina development scenario, where the code is not ready to be attached/copied into the image directly, but how can we use compose to make the prod image when code is ready, showe we use 2 different dockerfile and compose yml files.
+
+- Although its possible to use separate composne file for env. we maintain. BUT compose can also combine multiple compose files.
+- the teqnique is: first file as base config + overrides (as per env.)
+- by default compose is setup to read 2 composne files. 
+1/ docker-compose.yml    (mandatory)
+2/ docker-compose.override.yml  (optional)
+- -f option to specify multiple times for the non-default overrides.
+- config option to debug the compose file and display the effective compose file config after everything is combined.
+
+- -H to connect to a remotely running docker daemon.
+
+- so we have:
+docker-compose.yml			---> base compose file
+
+dev.dockerfile
+dev.docker-compose.yml		---> dev compose defining the dev.dockerfile.
+
+prod.dockerfile
+prod.docker-compose.yml		---> prd compose defining the prod.dockerfile.
+
+
+- docker-compose.yml
+
+version: '3'
+services:
+  app:
+    image: your-registry:5000/accumulator
+    environment:
+      - DB_HOST=app-db
+    depends_on:
+      - app-db
+    networks:
+      - backend
+  app-db:
+    image: mongo:3
+    networks:
+      - backend
+networks:
+  backend:
+
+
+- dev.dockerfile
+
+FROM node:6
+
+# use nodemon for development
+RUN npm install --global nodemon
+
+# install package.json dependencies
+RUN mkdir src
+WORKDIR /src
+ADD src/package.json /src/package.json
+RUN npm install
+
+# Development app runs on port 3000
+EXPOSE 3000
+
+# Run server and watch for changes
+CMD ["nodemon", "-L", "/src/app/bin/www"]
+
+
+- dev.docker-compose.yml
+
+version: '3'
+services:
+  app:
+    build:
+      context: .
+      dockerfile: dev.dockerfile
+    ports:
+      - '3000:3000'
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - './src:/src/app'
+	  
+- prod.dockerfile
+
+# Node.js version 6 base image
+FROM node:6
+
+# Production app runs on port 8080
+EXPOSE 8080
+
+# Copy source files into container
+COPY ./src /app
+
+# Set working directory to where source is
+WORKDIR /app
+
+# Install production dependencies and build app
+RUN npm install --production && npm run build
+
+# Start the server in production mode
+CMD ["npm", "start"]
+
+
+- prod.docker-compose.yml
+
+version: '3'
+services:
+  app:
+    build:
+      context: .
+      dockerfile: prod.dockerfile
+    ports:
+      - '8080'
+    environment:
+      - NODE_ENV=production
+    restart: always
+  app-db:
+    volumes: 
+      - db-data:/data/db
+    restart: always
+volumes:
+  db-data:
+  
+
+- the config command the shows the final combined compose file.
+
+D:\work\learn\docker-kubernetes\docker-compose\docker-compose-training-master\multi-env>docker-compose -f docker-compose.yml -f dev.docker-compose.yml config
+
+version: '3'
+networks:
+  backend: {}
+services:
+  app:
+    build:
+      context: D:\work\learn\docker-kubernetes\docker-compose\docker-compose-training-master\multi-env        
+      dockerfile: dev.dockerfile
+    depends_on:
+      app-db:
+        condition: service_started
+    environment:
+      DB_HOST: app-db
+      NODE_ENV: development
+    image: your-registry:5000/accumulator
+    networks:
+      backend: {}
+    ports:
+    - published: 3000
+      target: 3000
+    volumes:
+    - D:\work\learn\docker-kubernetes\docker-compose\docker-compose-training-master\multi-env\src:/src/app:rw 
+  app-db:
+    image: mongo:3
+    networks:
+      backend: {}
+
+
+
+
+
+Docker Swarm
+============================================
+- when container applications reach certain level of complexity or scale, we need to make use of several docker host machines.
+- Container orchestration products and tools allows to manage multiple container hosts in concert.
+- Docker Swarm mode is one such tool.
+- Swarm mode is a feature built into the Docker Engine provising native container orchestration in Docker.
+- needs to be enabled.
+
+features:
+	- integrated cluster management withing Docker Engine without any additional softwares.
+	- Declarative service model.
+	- monitor the cluster and reconcile between desired and actual state.
+	- uses the certificates and cryptographic tokens to secure the cluster.
+	- container orchestration features: service scaling, multi-host networking, resource-aware scheduling, load balancing rolling updates, restart policies.
+
+2 cluster management solutions:
+---------------------------------
+1/ Docker Swarm standalone
+- the very first container orchestration project by Docker
+- turns a pool of Docker hosts into a single virtual Docker host
+
+2/ Docker Swarm mode (swarmkit)
+- built into docker engine since version 1.12
+
+
+Docker Swarm mode concepts
+---------------------------------
+- Swarm: one of more docker engines running in swarm mode.
+- Node: each instance of docker engine. possible to run miltiple nodes in a single machine (i.e. by using virtual machines)
+- Manager: Nodes participate in swarm with specific role, managers and workers. every swarm cluster requires atleast one manager.
+Manager accept specifics from users and drive the swarm to the desired state. 
+- workers: responsible for running deligated work. run an agent which reports the status of their work to managers.
+- Service: Specifications that users submit to managers, declares its desired state, incl. networks, volumes, no. of replicas, etc.
+	- 2 kind of services:
+		- Replicated Service: based on user provided no. of replicas.
+		- Global Service: allocated one unit of work to each node, useful for monitoring services.
+- Tasks: units of work delegated by managers to realize a service config, task correspond to running containers that are replicas of the service.
+
+UCP (Universal Control Plane)
+-------------------------------
+- working with swarm mode is similar to docker, we interatct with swarm using docker CLI commands.
+- UCP comes along with enterprise edition of Docker to visualize and manage the cluster and containers, also role based access control.
+
+
+Swarm mode Architecture: Networking
+------------------------------------
+- In swarm mode, services need to communicate with one another and the replicas of the service can be spread across multiple nodes.
+- Docker provides a network driver (Overlay Network Driver) that makes multi host networking reliable.
+
+Overlay Network Driver
+******************************
+- a multi host networking in swarm is natively supported with the Overlay network driver.
+- No need to perform any external configuration.
+- we can attach a service to one or more overlay networks, same like, in Docker, when we attach a container to one of more user defined bridge network.
+- Overlay networks only apply to swarm services. Managers automatically extend Overlay network to nodes. 
+
+Network Isolation and Firewalls
+*********************************
+- Network Isolation and Firewalls apply to overlay networks just as they do for bridge network.
+- Containers within a Docker network have access to all ports in the same network.
+- Access is denied between containers that do not share a common network.
+- Traffic originating inside of a Docker network is permitted. like internet access from docker container.
+- Ingress Traffic or traffic coming into a Docker network is denied by default.--                                                  
+
+Service Discovery
+*********************************
+- With services distributed across multiple nodes, a service discovery mechanism is required to connect to the nodes running tasks of a service.
+- swarm mode has integrated service discover system based upon DNS
+- DNS is internal to Docker and implemented in docker engine, used to resolve names to IP addresses.
+- The network can be an overlay spanning multiple hosts, but the same DNS system is used.
+- All nodes in a network store corresponding DNS records for the network.
+
+Internal Load Balancing
+********************************
+- Each individual task/replicas is discoverable wth a name to IP mapping in internal DNS
+- but because services can be replicated acorss multiple nodes, which IP address should the service name resolved to? Docker assigns a service a single VIP address by default, requests for the VIP is now automatically load balanced across all healthy tasks spread across the overlay network,
+- By using the VIP, Docker can manage load balancing, allowing clients to interact with a single IP without considering load balancing, it also makes the service more resilient since the service can scale and tasks can change the nodes based on the how they are scheduled.
+- Request --> service discovery --> service virtual IP --> IPVS Load balancing --> Indivisual Tasks (containers)
+
+- ex: 2 services in a swarm, service A with 1 replica and service B with 2 replicas, when service A makes a request to service B, the VIP of service B is resolved by the DNS server. Using IPVS, the req for the VIP is routed to one of the 2 nodes running service B tasks.
+
+
+
+Swarm mode Architecture: Container Orchestration
+----------------------------------------------------
+Service placement
+********************
+- srevice can declare a certain no. of replicas as replicated services. 
+- for replicated services, decisions need to be made swarm managers for where service tasks will be scheduled or where the services will be placed.
+- managers make sure to spread the replicated services to all the nodes to ensure high availablity.
+- 3 ways we can influnece where a service is placed, can be specified at service creation time.
+	- CPU and Memory reservations
+		- can declare CPU and memory reservations for running individual containers.
+		- each service task can ONLY be scheduled on a node with enough available CPU and Mem
+		- any task remain in pending state until the required resources are available.
+		- globla service will only run on nodes that meet a given resource reservations.
+		- if service attempt to use more mem than available, the container or Docker daemon could get killed by the OOM (out of Of Memory) killer.
+	- Placement contraints
+		- allows to restrict the placement of service tsaks by providing few conditions (equals or not-equals). these conditions compare node attributed to the given string values.
+		- few built-in attributes for each node are: node.id, node.hostname, node.role (manager or worker)
+		- can also define own labels, can configure labesl on docker engine or on a node. 
+		- engine labels used to indicate things like OS, system architecture and available drivers. ex: for label, engine.labels.operatingsystem and values could be Ubuntu/Windos etc.
+		- node labels used to indicate the type of application the node intended to run, datacenter location the node is in, server rack the node is in etc. ex: for label, node.labels.datacenter, values could be NORTH/SOUTH/EAST or WEST etc, 
+		- when we provide multiple placement contraints and resource reservations, all constraints must be satisfied by a node in order to schedule a service task. applicable for both replicated and global services.
+	- placement references
+		- it influence how service tasks are distributed acorss appropriate nodes.
+		- currenty, only distribution option is "spread", labels are used as the attribute for spreading the tasks.
+		- ex: Assume, every node in swarm has a DC label with east or west as the value, using the DC value and spread preference value, half od the task will be scheduled on east and other half on west DC nodes.
+		- if specified multiple preferences, a hierarchy of preferences is created. ex: if the 1st preference is DC and 2nd is server rack, all tasks will be evenly spread across nodes within each DC and then in each DC, tasks are spread again evenly across racks.
+		
+Service Update Behavior
+***************************
+- we can also config how swarm applies the updates to the services. 
+- Swarm supports rolling updates where a fixed number of replicas are updated at a time, until all service replicas have been updated.
+- 3 main settings:
+	- Update Parallelism:
+		- the no. of tasks the scheduler updates at a time.
+	- Update delay:
+		- the time between updating sets os service tasks.
+	- Update failure action:
+		- 3 values: Pause (default), continue, or automatically rollback on failure.
+- we can also set a ratio for the total number of failed tasks updates to tolerate before failing the entire service update
+
+Rolling Back Service Update
+******************************
+- Docker swarm mode keeps track of the previous configuration for services.
+- This allows us to rollback manually at any time or automatically if an update fails.
+- the same above settings available in rolleback for configuring service update behavor. ex: Update Parallelism defines how many tasks to rollback at a time.
+
+	
+
+Swarm mode Architecture: Consistency
+----------------------------------------------------
+- Swarm mode can include several manager and worker nodes that provide falut tolerance and ensure high availability.
+- but with multiple manager how does swarm knows the state of the cluster.
+- all managers share a consistent internal state of the entire swarm. use a consensus algo (called Raft Consensus) to manage the consistent view of the cluster.
+- workers do not share a view of entire swarm, its the responsibility of manager node.
+
+Raft Consensus
+*******************
+- achieves consensus by electing one manager as the leader.
+- the elected manager makes the decisions for changing the state of cluster to match to the desired state.
+- leader accepts new service requests, service updates and how to schedule tasks.
+- BUT the decisions are accepted only when there is a quorum among all the managers. quorum ratio: (N-1)/2
+- If more than (N-1)/2 managers dies, the cluster state would freeze.
+- If the currently leader dies, a new leader is elected and until that time the cluster state is frozen.
+
+Manager Tradeoffs
+********************
+- More no. of managers increases the managerial data traffic required to maintain a consistent view of the cluster and the time to achieve concensus.
+- although increasing managers does increase the fault tolerence but decreases performance and scalability.
+
+- Rules for configuring the no. of managers.
+	- should have odd number of managers.
+	- a single manager is acceptable fr development and test swarms.
+	- single manager cant tolerence any failures, it cannot be us for prd env. 3 managr swarm can tolerate 1 failure wile 5 manager swarm can tolerate 2.
+	- Docker recommends max of 7 managers. above 7 has too much of perf impact.
+	- distribute managers across at least 3 AZ.
+	
+Working Manager Nodes
+*************************
+- By default, managers perform worker responsibility.
+- having over utilized managers can reduce perf of the swarm.
+- we can prevent any work from being scheduled on manager nodes by draining them. Draining removed any task currently running on a node and also prevernt any new task getting scheduled to it.
+
+Worker Node Tradeoffs
+************************
+- There is not much worry about tradeoffs in adding more worker nodes.
+- More workers give more capacity in running services and improved service fault tolerence.
+- more workers dont affect managers consensus process.
+- Workers actually do participate in a concensus process to exchange overlay network details, they participate in a weekly consistent highly scalable gossip protocol called SWIM.
+
+Raft Logs
+************************
+- these logs captures, leader manager records the raft consencus state changes such as creating new service or adding a new worker.
+- shared with other managers to establish a quorum.
+- persists to disk, stored in raft sub-directory of docker swarm data dir. /var/lib/docker/swarm on linux bu default.
+- we can backup a swarm cluster by backing up the entire swarm dir which incl. certificates and other files.
+- can restore a new swarm from a backup by replacing the directory swarm.
+
+
+
+Swarm mode Architecture: Security
+----------------------------------------------------
+
+Cluster Management
+********************
+- Swarm mode uses Public Key Infra (PKI) to secure swarm communication and state.
+- Swarm nodes encrypt all control plane communications using mutual TTLs.
+- when we initialize swarm Docker assigns the node on which we exceuted the command as a Manager. Manager then automatically creates several resources for secutity.
+- a Root Certificate Authority (CA), Worker token (used to join the swarm), Manager token (used to join the swarm)
+- when a new node joins the swarm, the manager issues a new certificate which the nodes uses for communication.
+- New managers also get a copy of the Root Certificate so that they can take over the leasership if elected.
+- we can use an alternate CA insetad of Docker to automatically handle the creation for us.
+- CA can be rotated out if needed. ratating the CA atomatically rotate the TLS certificates of all swarm nodes in the cluster.
+
+Data Plane
+********************
+- we can enable encryption of overlay network at the time of creation.
+- When a traffic leaves a host, an IPSec encrypted channel is used to communicate with a destination host.
+- swarm leader manager periodically regenerates and distribute the key used.
+- Overlay network encryption is not supported for windows as of Docker 17.12
+
+Raf Logs/Secrets
+********************
+- Raft logs are encrypted at rest on the manager nodes. 
+- protects accessing raft logs, because swarm secrets are stored in raft logs.
+- Secrets: are feature of Swarm that allows to securely store any type of secrets that can be used by the services. like: passwords, API key, any other info we dont want to expose over the network.
+
+Locking a Swarm
+********************
+- encripting Raft logs has its challenge to keep the key (which is used to decrypt the logs) somewhere where the manager has access to.
+- by default, the keys are stored on disk along with raft logs.
+- if an atacker gains access to the raft logs, they can get access to the keys, they can decrypt the logs and expose secrets.
+- for extra level of security swarm allows to implement strategy where the key is never stored on disk with a AUTOLOCK feature.
+	- when swarm is autolocked, we must provide the key when starting docker daemon, this requires manual intervestion when the manager is restarted.
+	- we can disable AUTOLOCK at any time so that manager can be restarted without manual intervention.
+	
+	
+Setting Up a Swarm
+=======================================================
+2 ways to setup Swarm locally on our machine.
+1/ Single node swarm
+	- not for prd env. as its not fault tolerent.
+2/ Multi node swarm using virtual machine.
+	- Unmanaged option: 
+		- we need to maintain the infa, applying patches, On-Prem i.e. we will need to have our own compute cluster or private cloud
+	,ensure docker is installed on bare metal servers or on VMs running on the top.
+		- UCP (Universal Control Plane) can setup an on-prem swarm using its UI
+	
+	- Managed Options: 
+		- we can use the swarm as a service without worring about hardware or software patches. 
+		- can use public cloud (Docker for Azure, Docker for AWS, Docker for IBM Cloud) proveded templates that allows to set few parameters and create swarm.
+		- also use Docker Cloud.
+
+ 
+Single node swarm
+------------------------------------------
+Open CMD on windoes or from VSCode.
+
+check docker is installed
+$ docker version
+
+PS D:\work\learn\docker-kubernetes\docker-compose> docker version
+Client:
+ Cloud integration: 1.0.17
+ Version:           20.10.8
+ API version:       1.41
+ Go version:        go1.16.6
+ Git commit:        3967b7d
+ Built:             Fri Jul 30 19:58:50 2021
+ OS/Arch:           windows/amd64
+ Context:           default
+ Experimental:      true
+
+Server: Docker Engine - Community
+ Engine:
+  Version:          20.10.8
+  API version:      1.41 (minimum version 1.12)
+  Go version:       go1.16.6
+  Git commit:       75249d8
+  Built:            Fri Jul 30 19:52:10 2021
+  OS/Arch:          linux/amd64
+  Experimental:     false
+ containerd:
+  Version:          1.4.9
+  GitCommit:        e25210fe30a0a703442421b0f60afac609f950a3
+ runc:
+  Version:          1.0.1
+  GitCommit:        v1.0.1-0-g4144b63
+ docker-init:
+  Version:          0.19.0
+  GitCommit:        de40ad0
+
+to see the current state of docker swarm, look for the Swarm key. "Swarm: inactive" means, the daemon is not running in swarm mode.
+$ docker info
+
+PS D:\work\learn\docker-kubernetes\docker-compose> docker info
+Client:
+ Context:    default
+ Debug Mode: false
+ Plugins:
+  buildx: Build with BuildKit (Docker Inc., v0.6.1-docker)
+  compose: Docker Compose (Docker Inc., v2.0.0-rc.1)
+  scan: Docker Scan (Docker Inc., v0.8.0)
+
+Server:
+ Containers: 3
+  Running: 0
+  Paused: 0
+  Stopped: 3
+ Images: 5
+ Server Version: 20.10.8
+ Storage Driver: overlay2
+  Backing Filesystem: extfs
+  Supports d_type: true
+  Native Overlay Diff: true
+  userxattr: false
+ Logging Driver: json-file
+ Cgroup Driver: cgroupfs
+ Cgroup Version: 1
+ Plugins:
+  Volume: local
+  Network: bridge host ipvlan macvlan null overlay
+  Log: awslogs fluentd gcplogs gelf journald json-file local logentries splunk syslog
+ Swarm: inactive
+ Runtimes: runc io.containerd.runc.v2 io.containerd.runtime.v1.linux
+ Default Runtime: runc
+ Init Binary: docker-init
+ containerd version: e25210fe30a0a703442421b0f60afac609f950a3
+ runc version: v1.0.1-0-g4144b63
+ init version: de40ad0
+ Security Options:
+  seccomp
+   Profile: default
+ Kernel Version: 5.10.16.3-microsoft-standard-WSL2
+ Operating System: Docker Desktop
+ OSType: linux
+ Architecture: x86_64
+ CPUs: 8
+ Total Memory: 6.028GiB
+ Name: docker-desktop
+ ID: PSQH:SGQZ:QQG4:4SXR:CDPF:ZFZQ:EQ5C:OY6X:IF6P:LWFM:D7ED:ONZQ
+ Docker Root Dir: /var/lib/docker
+ Debug Mode: false
+ Registry: https://index.docker.io/v1/
+ Labels:
+ Experimental: false
+ Insecure Registries:
+  127.0.0.0/8
+ Live Restore Enabled: false
+
+WARNING: No blkio throttle.read_bps_device support
+WARNING: No blkio throttle.write_bps_device support
+WARNING: No blkio throttle.read_iops_device support
+WARNING: No blkio throttle.write_iops_device support
+
+
+$ docker swarm --help
+
+PS D:\work\learn\docker-kubernetes\docker-compose> docker swarm --help
+
+Usage:  docker swarm COMMAND
+
+Manage Swarm
+
+Commands:
+  ca          Display and rotate the root CA
+  init        Initialize a swarm
+  join        Join a swarm as a node and/or manager
+  join-token  Manage join tokens
+  leave       Leave the swarm
+  unlock      Unlock swarm
+  unlock-key  Manage the unlock key
+  update      Update the swarm
+
+Run 'docker swarm COMMAND --help' for more information on a command.
+
+
+- start running a single node swarm locally.
+- shows the current node running as a swarm manager, also provides the command to add/join workers to this swarm.
+$ docker swarm init
+
+PS D:\work\learn\docker-kubernetes\docker-compose> docker swarm init
+Swarm initialized: current node (zra5r4wxshcjcsnwrsftwhpe3) is now a manager.
+
+To add a worker to this swarm, run the following command:
+
+    docker swarm join --token SWMTKN-1-575k2mvsms0qiog9r2pzb5jyhcv4oykcc78jjhhvwqvzk94ctv-5tzugfkehe0ml92ncp3qmxmxb 192.168.65.3:2377 
+
+To add a manager to this swarm, run 'docker swarm join-token manager' and follow the instructions.
+
+
+$ docker swarm join-token manager
+
+PS D:\work\learn\docker-kubernetes\docker-compose> docker swarm join-token manager
+To add a manager to this swarm, run the following command:
+
+    docker swarm join --token SWMTKN-1-575k2mvsms0qiog9r2pzb5jyhcv4oykcc78jjhhvwqvzk94ctv-1597f1oermihsq5t19db4x13x 192.168.65.3:2377 
+
+
+$ docker info
+- this will show "Swarm: active"
+- look at the no. of Managers to be 1, No. of Node to be 1, Raft details, (Managers: 1 Nodes: 1)
+
+PS D:\work\learn\docker-kubernetes\docker-compose> docker info
+Client:
+ Context:    default
+ Debug Mode: false
+ Plugins:
+  buildx: Build with BuildKit (Docker Inc., v0.6.1-docker)
+  compose: Docker Compose (Docker Inc., v2.0.0-rc.1)
+  scan: Docker Scan (Docker Inc., v0.8.0)
+
+Server:
+ Containers: 3
+  Running: 0
+  Paused: 0
+  Stopped: 3
+ Images: 5
+ Server Version: 20.10.8
+ Storage Driver: overlay2
+  Backing Filesystem: extfs
+  Supports d_type: true
+  Native Overlay Diff: true
+  userxattr: false
+ Logging Driver: json-file
+ Cgroup Driver: cgroupfs
+ Cgroup Version: 1
+ Plugins:
+  Volume: local
+  Network: bridge host ipvlan macvlan null overlay
+  Log: awslogs fluentd gcplogs gelf journald json-file local logentries splunk syslog
+ Swarm: active
+  NodeID: zra5r4wxshcjcsnwrsftwhpe3
+  Is Manager: true
+  ClusterID: wub3f0840mym956mx9qg8p2hb
+  Managers: 1
+  Nodes: 1
+  Default Address Pool: 10.0.0.0/8
+  SubnetSize: 24
+  Data Path Port: 4789
+  Orchestration:
+   Task History Retention Limit: 5
+  Raft:
+   Snapshot Interval: 10000
+   Number of Old Snapshots to Retain: 0
+   Heartbeat Tick: 1
+   Election Tick: 10
+  Dispatcher:
+   Heartbeat Period: 5 seconds
+  CA Configuration:
+   Expiry Duration: 3 months
+   Force Rotate: 0
+  Autolock Managers: false
+  Root Rotation In Progress: false
+  Node Address: 192.168.65.3
+  Manager Addresses:
+   192.168.65.3:2377
+ Runtimes: io.containerd.runc.v2 io.containerd.runtime.v1.linux runc
+ Default Runtime: runc
+ Init Binary: docker-init
+ containerd version: e25210fe30a0a703442421b0f60afac609f950a3
+ runc version: v1.0.1-0-g4144b63
+ init version: de40ad0
+ Security Options:
+  seccomp
+   Profile: default
+ Kernel Version: 5.10.16.3-microsoft-standard-WSL2
+ Operating System: Docker Desktop
+ OSType: linux
+ Architecture: x86_64
+ CPUs: 8
+ Total Memory: 6.028GiB
+ Name: docker-desktop
+ ID: PSQH:SGQZ:QQG4:4SXR:CDPF:ZFZQ:EQ5C:OY6X:IF6P:LWFM:D7ED:ONZQ
+ Docker Root Dir: /var/lib/docker
+ Debug Mode: false
+ Registry: https://index.docker.io/v1/
+ Labels:
+ Experimental: false
+ Insecure Registries:
+  127.0.0.0/8
+ Live Restore Enabled: false
+
+WARNING: No blkio throttle.read_bps_device support
+WARNING: No blkio throttle.write_bps_device support
+WARNING: No blkio throttle.read_iops_device support
+WARNING: No blkio throttle.write_iops_device support
+
+
+$ docker network ls
+- shows the "docker_gwbridge" is now created for connecting overlay networks to the host network, an the "ingress" network for handling external traffic towards swarm.
+
+PS D:\work\learn\docker-kubernetes\docker-compose> docker network ls
+NETWORK ID     NAME              DRIVER    SCOPE
+402a506a0e6c   bridge            bridge    local
+6549a0d2e733   docker_gwbridge   bridge    local
+89bee5d59760   host              host      local
+q4ljv7icx8x4   ingress           overlay   swarm
+365af69fde50   none              null      local
+
+
+$ docker swrm leave --force
+- force option is needes to make sure all the nodes dies when the last manager leaves the cluster.
+
+PS D:\work\learn\docker-kubernetes\docker-compose> docker swarm leave --force
+Node left the swarm.
+
+
+Multi node swarm using virtual machine.
+--------------------------------------------
+- to quickly create docker enabled VMs, we use docker-machine.
+- docker-machine command comes pre-installed with docker desktop for windows and Mac.
+
+# docker-machine 
+
+
+$ docker-machine create vm1
+- by default it will create VM in virtual box using an image with docker installed.
+
+$ docker-machine create vm2
+
+$ docker-machine create vm3
+
+
+vm1 used as manager, vm2, vm3 used as workers
+
+
+- list the VMs.
+$ docker-machine ls
+
+
+- connect to vm1
+$ docker-machine ssh vm1
+
+- after logging in run docker info to confirm docker is installed.
+$ docker info
+
+$ docker swarm init --help
+
+- we will initialize the swarm with an advertizing IP address that other nodes will use to join the same swarm.
+
+# docker swarm init --advertise-addr=192.168.99.100
+
+- copy the join command from above.
+
+- ssh to other VMs.
+
+- connect to vm2
+$ docker-machine ssh vm2
+
+- after login run the below swarm join command.
+$ docker swarm join --token ................
+
+
+- connect to vm3
+$ docker-machine ssh vm3
+
+- after login run the below swarm join command.
+$ docker swarm join --token ................
+
+- run docker info on manager node vm1
+- look at the no. of Managers to be 1, No. of Node to be 3 i.e. 3 node swarm with 1 manager.
+$ docker-machine ssh vm2
+$ docker info
+
+
+Managing Nodes
+-----------------------------------
+- connect to vm1 swarm manager node.
+- docker node command is used for node management.
+
+$ docker node --help
+
+- listing nodes
+$ docker node ls 
+
+
+- promote vm2 to be manager, status reachable means the manage is participating in Raft quorum
+$ docker node promote vm2
+
+$ docker node ls 
+
+
+- demote vm2 from manager to worker.
+$ docker node demote vm2
+
+$ docker node ls 
+
+
+- update a node like its availability or adding or removing labels.
+$ docker node update --help
+
+- update the availability to drain. posible option for node availability are: Active, Pause (cant schedule any new tasks but existing tasks are running), Drain (ensure the node does not have any tasks scheduled also prevent new tasks being scheduled on this node)
+$ docker node update --availability drain vm1
+
+- AVAILABILITY column reflects the change.
+$ docker node ls 
+
+- change the manager vm1 node back to active in order to get tasks scheduled on it,.
+$ docker node update --availability drain active vm1
+
+
+- add samplelabels to the nodes.
+$ docker node update --label-add zone=1 vm1
+$ docker node update --label-add zone=2 vm2
+$ docker node update --label-add zone=3 vm3
+
+- to see node lables.. use inspect command
+$ docker node inspect vm1
+
+
+- listing tasks
+$ docker node ps
+
+- removing nodes from swarm
+$ docker rm ...
+
+
+Managing Services
+---------------------------------------
+- will use 2 images to demo how to work with services.
+1/ Docker swarm visualizer: to visualize the state of nodes in the swarm and see where service tasks are being scheduled.
+
+2/ simple webservice: displayes the name of the node running the tasks.
+
+
+- docker service command is used while working with services in swarm.
+$ docker service --help
+
+PS D:\work\learn\docker-kubernetes\docker-compose> docker service --help
+
+Usage:  docker service COMMAND
+
+Manage services
+
+Commands:
+  create      Create a new service
+  inspect     Display detailed information on one or more services
+  logs        Fetch the logs of a service or task
+  ls          List services
+  ps          List the tasks of one or more services
+  rm          Remove one or more services
+  rollback    Revert changes to a service's configuration
+  scale       Scale one or multiple replicated services
+  update      Update a service
+
+Run 'docker service COMMAND --help' for more information on a command.
+
+
+
+https://github.com/cloudacademy/docker-swarm-mode-training
+
+
+

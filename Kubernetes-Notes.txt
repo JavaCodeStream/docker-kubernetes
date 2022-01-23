@@ -1,0 +1,1966 @@
+introduction to Kubernetes
+============================================================
+https://github.com/cloudacademy/intro-to-k8s
+
+
+
+overview of Kubernetes
+============================================================
+- Kubernetes, often abbreviate as K8s, is an open-source container-orchestration tool designed to automate, deploying, scaling, and the operation of containerized applications.
+- Kubernetes was born out of Google's experience running workloads in production on their internal Borg cluster manager for well over a decade, it is designed to grow from tens, thousands, or even millions of containers. 
+- Kubernetes is a distributed system. Multiple machines are configured to form a cluster. Machines may be a mix of physical and virtual and they may exist on-prem or in cloud infrastructure each with their own unique hardware configurations.
+- Kubernetes places containers on machines using scheduling algorithms that consider available compute resources, requested resources priority, and a variety of other customizable constraints.
+- Kubernetes is also smart enough to move containers to different machines as this machines are added or removed. Kubernetes is also container runtime agnostic which means you can actually use Kubernetes with different container runtimes.
+- Kubernetes can automatically move containers from failed machines to running machines. 
+- Multiple clusters can also join up with each other to form a Federation. This feature is primarily for redundancy, such that, if one cluster dies, containers will automatically move to another cluster.
+- The following features also contribute to making Kubernetes a top choice for orchestrating containerized applications: the automation of deployment rollout and rollback, seamless horizontal scaling, secret management, service discovery and load balancing, support for both Linux and Windows containers, simple log collection, stateful application support, persistent volume management, CPU and memory quotas batch job processing, and role-based access control. 
+- let's compare Kubernetes with some other tools, We'll compare DCOS, Amazon ECS, and Docker Swarm Mode, each has their own niche and unique strength
+	- DCOS or Data Center Operating System is similar to Kubernetes in many ways DCOS pools compute resources into a uniform task pool, but the big difference here is that DCOS targets many different types of workloads including, but not limited to, containerized applications. This makes DCOS attractive to organizations which are not using containers for all of their applications. DCOS also includes a Package Manager to easily deploy it to his systems like, Kafka or Spark. You can even run Kubernetes on DCOS given its flexibility for different types of workloads.
+	- Amazon ECS, or the Elastic Container Service is AWS' ability to orchestrate containers. ECS allows you to create pools of compute resources and uses API calls to orchestrate containers across them. Compute resources are EC2 instances that you can manage yourself or let AWS manage them with AWS Fargate. It's only available inside of AWS and generally, less feature compared to other open source tools. So it may be useful for those of you who are deep into the AWS ecosystem.
+	- Docker Swarm Mode is the official Docker solution for orchestrating containers across a cluster of machines. Docker Swarm Mode builds a cluster from multiple Docker hosts and distributes containers across them. It shows a similar feature set with Kubernetes or DCOS. Docker Swarm Mode works natively with the docker command. This means that associated tools like Docker Compose can target Swarm Mode clusters without any changes.
+	
+
+Deploying Kubernetes
+============================================================
+Deploying Kubernetes single-node cluster. 
+For development and test scenarios, you can run Kubernetes on a single-machine. 
+- Docker for Mac and Docker for Windows, both include support for running Kubernetes on the local machine in a single-node configuration. Just make sure Kubernetes is enabled in the settings. This is the easiest way to get started if you already have Docker installed.
+- Another option is to use minikube which supports Linux in addition to Macs and Windows.
+- Lastly, Linux systems can use kubeadm to set up a single-node cluster. Kubeadm is used as a building block for building Kubernetes clusters, but it can effectively create single-node clusters. But be aware that kubeadm will install Kubernetes on the system itself rather than a virtual machine, like the prior methods.
+
+Single-node clusters 
+- useful within continuous integration pipelines. In this use case, you want to create ephemeral clusters that start quickly and are in a pristine state for testing applications in Kubernetes each time you check a new code
+
+multi-node cluster
+- For your production workloads, you want clusters with multiple nodes to take advantage of horizontal scaling and to tolerate node failures.
+- "How much control do you want over the cluster versus the amount of effort you are willing to invest in maintaining it?"
+	- Fully-managed solutions free you from routine maintenance but often lag the latest Kubernetes releases by a couple of version numbers for consistency. New versions of Kubernetes are released every three months.
+	- Examples of fully-managed Kubernetes as a service solutions include Amazon Elastic Kubernetes Service or EKS, Azure Kubernetes Service or AKS, and Google Kubernetes Engine or GKE.
+- To have full control over your cluster, you should check out kubespray, kops, and kubeadm.
+
+- "Do you need enterprise support?" 
+	- Several vendors offer enterprise support and additional features on top of Kubernetes. These can include OpenShift by RedHat, Pivotal Container Service, or Rancher.
+	
+- "Do you want the cluster on-prem, in the cloud, or both?"
+	- Because Kubernetes provides users with an abstraction of cluster of resources to the underlining nodes that can be running in different platforms. Kubernetes itself is at the core of open source hybrid clouds. Even cloud vendor Kubernetes solutions allow using on-prem compute. For example, GKE on-prem lets you run GKE on-premise, EKS allows you to add an on-premise nodes to the cluster, and Azure Stack allows you to run AKS on-prem.
+	
+- "Do you want to run Linux containers, Windows containers, or a mix?"
+	- To support Linux containers, you need to ensure you have Linux nodes in your cluster.
+	- To support Windows containers, you need to ensure that you have Windows nodes in your cluster. 
+	- Both Linux and Windows nodes can exist in the same cluster to support both types of containers.
+	
+
+Installing Kubernetes
+=========================================
+- Install Minikube via Docker desktop on windows -> settings -> kubernetes tab -> check all boxes and apply.
+- open VScode terminal
+
+$ minikube status
+minikube
+type: Control Plane    
+kubelet: Stopped
+apiserver: Stopped
+kubeconfig: Stopped
+timeToStop: Nonexistent
+
+$ minikube start 
+😄  minikube v1.17.1 on Microsoft Windows 10 Home Single Language 10.0.19042 Build 19042
+✨  Using the virtualbox driver based on existing profile
+🎉  minikube 1.23.2 is available! Download it: https://github.com/kubernetes/minikube/releases/tag/v1.23.2
+💡  To disable this notice, run: 'minikube config set WantUpdateNotification false'
+
+👍  Starting control plane node minikube in cluster minikube
+🔄  Restarting existing virtualbox VM for "minikube" ...
+🐳  Preparing Kubernetes v1.20.2 on Docker 20.10.2 ...
+🔎  Verifying Kubernetes components...
+🌟  Enabled addons: default-storageclass, storage-provisioner
+🏄  Done! kubectl is now configured to use "minikube" cluster and "default" namespace by default
+
+$ minikube status
+minikube
+type: Control Plane
+host: Running      
+kubelet: Running
+apiserver: Running
+kubeconfig: Configured
+timeToStop: Nonexistent
+
+
+$ minikube stop
+✋  Stopping node "minikube"  ...
+🛑  1 nodes stopped.
+
+
+Kubernetes Command
+=========================================
+- Note: kubectl will accept the singular or plural form of resource kinds. For example kubectl get pods and kubectl get pod are equivalent.
+
+
+Kubernetes Architecture
+=========================================
+- Kubernetes clusters are composed of nodes and the term cluster refers to all of the machines collectively and can be thought of as the entire running system.
+- The machines in the cluster are referred to as nodes. A node may be a VM or a physical machine. Nodes are categorized as worker nodes or master nodes.
+- Each worker node include software to run containers managed by Kubernetes control plane and the control plane runs on master nodes. 
+- The control plane is a set of APIs and software that Kubernetes users interact with. These APIs and software are collectively referred to as master components.
+- In Kubernetes containers are grouped into Pods. Pods may include one or more containers. All containers in a Pod run on the same node. 
+- Services, define networking rules for exposing Pods to other Pods or exposing Pods to the internet. Kubernetes services expose Pods to the cluster as well as to the public internet
+- Kubernetes deployments control rollout and rollback of Pods.
+
+Kubernetes Components
+=========================================
+- API server:
+	- acts as the forntend for k8s, users, management devices, CLI all talk to api server to talk to Kubernetes clusters.
+- etcd ket store:
+	- distributed key-value store to store all the data used to manage the cluster, multiple nodes, multiple masters, etcd stores all these info on all the nodes in a distributed manner.
+	- implements locks withing the cluster to ensure no conflicts within the multiple masters.
+	
+- Scheduler:
+	- distributes work to contianters acorss multiple nodes. looks for newly created containers and assignes to them to nodes.
+
+- Controllers:
+	- brain behind the complete orchestration, responsble for noticing and responding when nodes, containers or end points goes down, brings up new containers in such cases. 
+	
+- Container Runtime:
+	- underlying software used to run the containers. in our case its Docker. there are other options as well.
+	
+- Kubelet:
+	- agent that runs on each node of the cluster, making sure containers running on that nodes as expected.
+	- interacts with master to provide health info of worker, carry out workloads requested by master.
+	
+
+Master vs Worker Nodes
+----------------------------------------
+2 types of server, Master and Worker.
+- Master nodes has the kube-apiserver installed and makes it master node.
+	- worker interactions with master are stored in key store i.e. etcd key store located in master.
+	- controller and scheduler located in master node.
+- Worker has kubelet agent installed and makes it worker.
+	
+kubectl
+----------------------------------------
+- kubectl run hello-minikube
+
+- kubectl cluster-info
+
+- kubectl get nodes
+
+
+
+Interacting with Kubernetes
+==========================================
+- the master components provide the Kubernetes control plane
+- The way that you retrieve and modify state information in the cluster, is by sending a request to the Kubernetes API server, which is the master component that acts as a front end for the control plane
+- the first method of interacting with Kubernetes, directly communicating via rest API calls. but not common to need, to work directly with the API server. You might need to if you're using a programming language that does not have a Kubernetes client library.
+- Client libraries are our second method of interacting with Kubernetes. Client libraries can handle the tedium of authenticating and managing individual REST API requests and responses. Kubernetes maintains official client libraries for Go, Python, Java, .NET, and JavaScript. 
+- The next method of interacting with Kubernetes is the most common, Kubernetes command line tool called cube control, or Kubectl.
+- With cube control, you can issue commands that are at a high level of abstraction with each command, translating into the appropriate API server request. With cube control, you can also access clusters locally, as well as remote
+- it manages all different types of Kubernetes resources, and provides debugging and introspection features.
+
+- Kubectl create
+	- creates a new Kubernetes resource. You can create several resources using the built-in sub commands of create, or you can use resources specified in a file. The files are most commonly in gamble format and are referred to, as manifests.
+- Kubectl delete
+	- it deletes a particular resource. You can do the same with a file, with resources declared inside of it
+- Kubectl get
+	- returns a list of all the resources for a specified type. For example, "Kubectl get pods" lists all the pods and the current namespace.
+- Kubectl describe
+	- print detailed information about a particular resource or a list of resources. "Kubectl describe pod", server gives detailed information about the pod named server
+- Kubectl logs
+	- print container logs for a particular pod or a specific container inside of a multi container pod.
+	
+
+- final method of interacting with Kubernetes, is through the web dashboard. The dashboard provides a nice list of dashboards, as well as, easy to navigate views of cluster resources. 
+- The web dashboard is optional, so not all clusters will have it. Kubectl truly is the way to go for maximum productivity
+
+
+Pods
+====================================
+- Pods are the basic building block in Kubernetes.
+- Pods contain one or more containers
+- All pods share a container network that allows any pod to communicate with any other pod, regardless of the nodes that the pods are running on. Each pod gets a single IP address in the container network. All pods can communicate with each other and that each pod has one IP address. 
+- Manifest files are used to describe all kinds of resources in Kubernetes
+- The manifests are sent to the Kubernetes API server where the necessary actions are taken to realize what is described in the manifest. 
+- use kubectl to send a manifest to the API server and one way of doing this is with the kubectl create command. 
+
+- For pod manifests, the cluster will take the following actions. 
+	- Selecting a node with available resources for all of the pods' containers, 
+	- scheduling the pod to that node
+	- The node will then download the pod's container images and then subsequently run the containers. 
+	
+- Kubectl get pods
+
+- Kubernetes supports multiple API versions and version v1 is the core API version containing many of the most common resources such as pods and nodes.	
+- Manifest file will hav 4 major sections (apiVersion, kind, meteata, spec)
+- Kind indicates what the resource is
+- Metadata then includes information relevant to the resource that can help identify resources. The minimum amount of metadata is a name which is set to my pod. Names must be unique within a Kubernetes name space. Metadata must include a name but labels are usually a good idea to also help you further filter down your resources. 
+- Manifests also include a spec to configure the unique parts of each resource kind
+
+- Pod specs include the list of containers (min one container spec), which must specify our container name and image, but is often useful to set the resource requests and limits.  
+
+PS D:\work\learn\docker-kubernetes\intro-to-k8s-master> kubectl get pods
+No resources found in default namespace.
+
+1.1-basic_pod.yaml
+---------------------
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mypod
+spec:
+  containers:
+  - name: mycontainer
+    image: nginx:latest
+
+- "kubectl create -f 1.1-basic_pod.yaml" The f option tells us to create, is going to be creating a manifest from a file. multiple  yml files can be supplied using multiple -f options. ex: "kubectl create -f 1.1-basic_pod.yaml -f 1.2-basic_pod.yaml -f 1.3-basic_pod.yaml"
+
+- if we run "kubectl get pods", we can see mypod is running. mypod is technically an object of a pod kind of resource. Kubectl shows the name, the number of running containers, the pod state, restarts, and the age of the pod in the cluster.
+- "Kubectl describe pods | more" OR "Kubectl describe pod <pod_name>"  shows lot more information than what get provides.
+
+PS D:\work\learn\docker-kubernetes\intro-to-k8s-master\src> kubectl create -f .\1.1-basic_pod.yaml
+pod/mypod created
+
+kubectl get pods
+NAME    READY   STATUS              RESTARTS   AGE
+mypod   0/1     ContainerCreating   0          19s
+
+kubectl describe pod | more
+Name:         mypod
+Namespace:    default
+Priority:     0
+Node:         minikube/192.168.99.100
+Start Time:   Tue, 02 Nov 2021 17:25:18 +0530
+Labels:       <none>
+Annotations:  <none>
+Status:       Running
+IP:           172.17.0.8
+IPs:
+  IP:  172.17.0.8
+Containers:
+  mycontainer:
+    Container ID:   docker://fae7f156fa3f859b3f379bbd60e7590d7d446dbd6267f5e26f19887110a5a8a6
+    Image:          nginx:latest
+    Image ID:       docker-pullable://nginx@sha256:644a70516a26004c97d0d85c7fe1d0c3a67ea8ab7ddf4aff193d9f301670cf36
+    Port:           <none>
+    Host Port:      <none>
+    State:          Running
+      Started:      Tue, 02 Nov 2021 17:26:00 +0530
+    Ready:          True
+    Restart Count:  0
+    Environment:    <none>
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from default-token-whzzx (ro)
+Conditions:
+  Type              Status
+  Initialized       True
+  Ready             True
+  ContainersReady   True
+  PodScheduled      True
+Volumes:
+  default-token-whzzx:
+Node-Selectors:  <none>
+Tolerations:     node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                 node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:
+  Type    Reason     Age   From               Message
+  ----    ------     ----  ----               -------
+  Normal  Scheduled  56s   default-scheduler  Successfully assigned default/mypod to minikube
+  Normal  Pulling    55s   kubelet            Pulling image "nginx:latest"
+  Normal  Pulled     14s   kubelet            Successfully pulled image "nginx:latest" in 40.43443505s
+  Normal  Created    14s   kubelet            Created container mycontainer
+  Normal  Started    14s   kubelet            Started container mycontainer
+
+
+- Kubernetes can apply certain changes to different kinds of resources on the fly. But, Kubernetes cannot update ports on a running pod so we need to delete the pod and recreate it
+
+- "kubectl delete pod mypod" to delete this pod. OR "kubectl delete -f 1.1-basic_pod.yaml", will delete all of the resources declared in that file.
+
+1.2-port_pod.yaml
+------------------------
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mypod
+  labels:
+    app: webserver
+spec:
+  containers:
+  - name: mycontainer
+    image: nginx:latest
+    ports:
+      - containerPort: 80
+
+- here, ports mapping is added and the container port field is set to 80 for HTTP. BUt sending a request to port 80 on that noted IP (Node:         minikube/192.168.99.100) wont work. the pod's IP is on the container network and this lab instance is not part of the container network so it won't work. But if we sent the request from a container in a Kubernetes pod, the request would succeed since pods can communicate with all other pods by default. 
+
+- Labels are key value pairs that identify resource attributes. For example, the application tier, whether it's front end or back end or maybe a region such as US East or US West. You could have multiple labels. labels are used to make selections in Kubernetes.
+
+
+$ kubectl delete pod mypod
+pod "mypod" deleted
+
+
+$ kubectl create -f 1.3-labeled_pod.yaml
+pod/mypod created
+
+$ kubectl describe pod mypod | more
+Name:         mypod
+Namespace:    default
+Priority:     0
+Node:         minikube/192.168.99.100
+Start Time:   Tue, 02 Nov 2021 19:00:45 +0530
+Labels:       app=webserver
+Annotations:  <none>
+Status:       Running
+IP:           172.17.0.8
+IPs:
+  IP:  172.17.0.8
+Containers:
+  mycontainer:
+    Container ID:   docker://f5352adca49529a8f94af71af564956e71a35f3eeea84eb431267cd38ca0cc20
+    Image:          nginx:latest
+    Image ID:       docker-pullable://nginx@sha256:644a70516a26004c97d0d85c7fe1d0c3a67ea8ab7ddf4aff193d9f301670cf36
+    Port:           80/TCP
+    Host Port:      0/TCP
+    State:          Running
+      Started:      Tue, 02 Nov 2021 19:00:50 +0530
+    Ready:          True
+    Restart Count:  0
+    Environment:    <none>
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from default-token-whzzx (ro)
+Conditions:
+  Type              Status
+  Initialized       True
+  Ready             True
+  ContainersReady   True
+  PodScheduled      True
+Volumes:
+  default-token-whzzx:
+    SecretName:  default-token-whzzx
+    Optional:    false
+QoS Class:       BestEffort
+Node-Selectors:  <none>
+Tolerations:     node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                 node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:
+  Type    Reason     Age   From               Message
+  ----    ------     ----  ----               -------
+  Normal  Scheduled  43s   default-scheduler  Successfully assigned default/mypod to minikube
+  Normal  Pulling    42s   kubelet            Pulling image "nginx:latest"
+  Normal  Pulled     39s   kubelet            Successfully pulled image "nginx:latest" in 3.116574862s
+  Normal  Created    39s   kubelet            Created container mycontainer
+  Normal  Started    39s   kubelet            Started container mycontainer
+  
+
+- look for : "QoS Class:       BestEffort", "Port:           80/TCP", "Labels:       app=webserver"
+
+
+- Kubernetes can schedule pods based on their resource requests. With no resource spec for containers, It'll just throw them onto any node that isn't under pressure or starved of resources. That's called best effort quality of service which was displayed in the describe output
+
+1.4-resources_pod.yaml
+--------------------------------
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mypod
+  labels:
+    app: webserver
+spec:
+  containers:
+  - name: mycontainer
+    image: nginx:latest
+    resources:
+      requests:  # sets the min required resources to schedule the pod onto a node
+        memory: "128Mi" # 128Mi = 128 mebibytes
+        cpu: "500m"     # 500m = 500 milliCPUs (1/2 CPU)
+      limits:    # sets the max required resources the node to allocate to the pod
+        memory: "128Mi"
+        cpu: "500m"
+    ports:
+      - containerPort: 80
+
+
+
+Services
+==============================
+- Pods are accessible by its allocated random IP given by Kubernetes.
+- But what happens if you have a Pod that fails? Once the Pod is rescheduled it will be assigned an IP address from the available pool of addresses and not necessarily the same IP address it had before.
+- So to overcome all of these networking issues, Kubernetes employs services.
+
+- a service defines networking rules for accessing Pods in the cluster and from the internet 
+- can declare a service to access a group of Pods using labels. example, we can use our app label just like the webserver Pod for the services target.
+
+- Clients could then access the service at a fixed address. And the services networking rules will direct client request to a Pod in the selected group of Pods.
+
+2.1-web_service.yaml
+-------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: webserver
+  name: webserver
+spec:
+  ports:
+  - port: 80 # target container port
+  selector:  # target container labels
+    app: webserver
+  type: NodePort # allocates a port over this service on each node in the cluster
+
+- here, The kind is now 'Service', metadata uses the same label as the Pod since it is related to the same application. This isn't required but it is a good practice to stay organized. Now for the spec, the selector is our important field. The selector defines the labels to match the Pods against.
+- Services must also define port mappings. So, this service targets Port 80. This is the value of the Pods' container port.
+
+- type is optional. This value defines actually how to expose the Service. ex: NodePort, there are other values for types.
+
+- 'NodePort' allocates a port over this service on each node in the cluster. By doing this, you can send a request to any node in the cluster on the designated port and be able to reach that Service. The designated port will be chosen from the set of available ports on the nodes, unless you specify a NodePort as part of the specs ports.
+
+- NodePort type of service to gain access to the service from outside of the cluster on a static Port that is reserved on each node in the cluster. This allowed us to access the service by sending a request to any of the nodes, just not the node that is running the Pod.
+
+$ kubectl create -f .\1.3-labeled_pod.yaml  
+pod/mypod created
+
+$ kubectl get pods
+NAME    READY   STATUS              RESTARTS   AGE
+mypod   0/1     ContainerCreating   0          4s
+
+$ kubectl get pods
+NAME    READY   STATUS    RESTARTS   AGE
+mypod   1/1     Running   0          18s
+
+$ kubectl create -f 2.1-web_service.yaml
+service/webserver created
+
+$ kubectl get services
+NAME         TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
+kubernetes   ClusterIP   10.96.0.1       <none>        443/TCP        267d
+webserver    NodePort    10.111.192.13   <none>        80:32221/TCP   7s
+
+- Cluster-IP:is our private IP for each service. ,  External-IP: is not available for NodePort services but if it were, then this would be the public IP for a service, Ports column, Kubernetes will automatically allocate a Port in the Port range allocated for NodePorts which is commonly port numbers between 30,000 and 32,767.
+
+
+$ kubectl describe service webserver
+Name:                     webserver
+Namespace:                default
+Labels:                   app=webserver
+Annotations:              <none>
+Selector:                 app=webserver
+Type:                     NodePort
+IP Families:              <none>
+IP:                       10.111.192.13
+IPs:                      10.111.192.13
+Port:                     <unset>  80/TCP
+TargetPort:               80/TCP
+NodePort:                 <unset>  32221/TCP
+Endpoints:                172.17.0.8:80
+Session Affinity:         None
+External Traffic Policy:  Cluster
+Events:                   <none>
+
+- look for: "Labels: app=webserver", "Selector: app=webserver", "TargetPort: 80/TCP", "NodePort: <unset>  32221/TCP", "Endpoints: 172.17.0.8:80"
+
+- the Endpoint, which is the address of each Pod in the selected group, along with a container port. If there were multiple Pods selected by the label, then you would see each of them listed here. Kubernetes automatically adds and removes these endpoints as matching Pods are created and deleted, and so you don't need to do anything to manage those endpoints.
+
+- since the NodePort is on we need a nodes IP, "kubectl describe nodes" shows the IP, Nodes are resources in the cluster, just like Pods and services. So, you can use the get and describe commands on them. 
+
+
+$ kubectl describe nodes | grep -i address -A 1
+
+- Look for:
+Addresses:
+  InternalIP:  192.168.99.100
+  
+- browse http://192.168.99.100:32221/ OR 
+
+$ curl http://192.168.99.100:32221 
+
+
+StatusCode        : 200
+StatusDescription : OK
+Content           : <!DOCTYPE html>
+                    <html>
+                    <head>
+                    <title>Welcome to nginx!</title>
+                    <style>
+                    html { color-scheme: light dark; }
+                    body { width: 35em; margin: 0 auto;
+                    font-family: Tahoma, Verdana, Arial, sans-serif; }
+                    </style...
+RawContent        : HTTP/1.1 200 OK
+                    Connection: keep-alive
+                    Accept-Ranges: bytes
+                    Content-Length: 615
+                    Content-Type: text/html
+                    Date: Tue, 02 Nov 2021 15:33:29 GMT
+                    ETag: "6137835f-267"
+                    Last-Modified: Tue, 07 Sep 2021 ...
+Forms             : {}
+Headers           : {[Connection, keep-alive], [Accept-Ranges, bytes], [Content-Length, 615], [Content-Type, text/html]...}
+Images            : {}
+InputFields       : {}
+Links             : {@{innerHTML=nginx.org; innerText=nginx.org; outerHTML=<A href="http://nginx.org/">nginx.org</A>;
+                    outerText=nginx.org; tagName=A; href=http://nginx.org/}, @{innerHTML=nginx.com; innerText=nginx.com;
+                    outerHTML=<A href="http://nginx.com/">nginx.com</A>; outerText=nginx.com; tagName=A; href=http://nginx.com/}}     
+ParsedHtml        : mshtml.HTMLDocumentClass
+RawContentLength  : 615
+
+
+Multi-Container Pods
+==============================
+-  a simple application that increments and prints a counter. 
+	- It's split into 4 containers across 3 tiers. 
+	- The server tier includes the server container that is a simple Node.js application. It accepts a post request to increment a counter and a get request to retrieve the current value of the counter. 
+	- The counter is stored in the Redis container which comprises the data tier. The support tier includes a poller and a counter.
+	- The poller container continually makes a get request back to the server and prints the value. The counter continually makes a post request to the server with random values between 1 & 10.
+	
+- a Namespace separates different Kubernetes resources. Namespaces may be used to isolate users, environments, or applications. You can also use Kubernetes' role-based authentication to manage users as access to resources in a given Namespace. Using Namespaces is a best practice.
+
+- Creating Namespace via manifest. Namespaces don't require a spec. 
+
+$ kubectl create -f 3.1-namespace.yaml
+namespace/microservice created
+
+- name can also be created using "kubectl create namespace" command
+
+- Use your kubectl commands, either use a --namespace or -n option to specify the Namespace, otherwise the default Namespace will be used. 
+
+- you can specify namespace in metadata section of Pod but that makes this manifest slightly less portable because the Namespace can't be overwritten at the command line.
+
+- When you use the latest tag in Kubernetes, and it will always pull the image whenever the Pod started. This can introduce bugs, if a Pod restarts and pulls the new latest version without you realizing it. set the "imagePullPolicy" field to "IfNotPresent" which Prevent always pulling the image in using an existing version, if one exist. better off specifying a specific tag rather than the latest.
+- When specific tags are used for image, the default imagePull behavior is, IfNotPresent
+
+
+3.2-multi_container.yaml
+--------------------------
+apiVersion: v1
+kind: Pod
+metadata:
+  name: app
+spec:
+  containers:
+    - name: redis
+      image: redis:latest
+      imagePullPolicy: IfNotPresent
+      ports:
+        - containerPort: 6379
+    
+    - name: server
+      image: lrakai/microservices:server-v1
+      ports:
+        - containerPort: 8080
+      env:
+        - name: REDIS_URL
+          value: redis://localhost:6379
+
+    - name: counter
+      image: lrakai/microservices:counter-v1
+      env:
+        - name: API_URL
+          value: http://localhost:8080
+
+    - name: poller
+      image: lrakai/microservices:poller-v1
+      env:
+        - name: API_URL
+          value: http://localhost:8080
+
+
+- the server, runs on port 8080, such that it is exposed. The server also requires a REDIS_URL environment variable to connect to the data tier. 
+- So how does the server know where to find Redis? Well, because containers in a Pod share the same network stack, a result of which that they all share the same IP address. So, they can reach other containers in the Pod on the localhost and at their declared container port. 
+- so server can reach redis on localhost:6379, counter/poller can reach server on localhost:8080
+
+- Create the POD with -n option to set the Namespace for this Pod, such that it's created in a "microservice" Namespace. 
+
+$ Kubectl create -f 3.2 yaml -n microservice.
+namespace/microservice created
+
+
+$ kubectl get namespaces
+NAME                     STATUS   AGE
+cert-manager             Active   267d
+default                  Active   267d
+kube-node-lease          Active   267d
+kube-public              Active   267d
+kube-system              Active   267d
+microservice             Active   11m
+scylla                   Active   267d
+scylla-operator-system   Active   267d
+
+$ kubectl describe namespace microservice
+Name:         microservice
+Labels:       app=counter
+Annotations:  <none>
+Status:       Active
+
+No resource quota.
+
+No LimitRange resource.
+
+
+
+$ kubectl create -n microservice -f 3.2-multi_container.yaml  
+pod/app created
+
+- Remember to include the same Namespace option with kubectl commands Otherwise you will be targeting the default Namespace. 
+
+- "kubectl get -n microservices pod app" The -n namespace option can be included anywhere after kubectl. It doesn't have to be after get, it could be before or after.
+
+$ kubectl get -n microservice pod app
+NAME   READY   STATUS              RESTARTS   AGE
+app    0/4     ContainerCreating   0          80s
+
+$  kubectl get -n microservice pod app
+NAME   READY   STATUS    RESTARTS   AGE
+app    4/4     Running   0          112s
+
+- shows 4/4 since the POD has 4 containers.
+
+
+- Once the containers are running, we can look at the container logs to see what they're doing. Logs are simply anything that is written to standard out or standard error in the container. The containers need to write messages to standard out or standard error, otherwise nothing will appear in the logs.
+
+- "kubectl log" command retrieves logs for a specific container in a given Pod. It dumps all of the logs by default or you can use the tail option to limit the number of logs present. 
+
+$ kubectl logs -n microservice app counter --tail 10
+Incrementing counter by 3 ...
+Incrementing counter by 5 ...
+Incrementing counter by 3 ...
+Incrementing counter by 7 ...
+Incrementing counter by 2 ...
+Incrementing counter by 9 ...
+Incrementing counter by 8 ...
+Incrementing counter by 6 ...
+Incrementing counter by 7 ...
+Incrementing counter by 7 ...
+
+$ kubectl logs -n microservice app counter -f --tail 10  (for printing continous logs)
+
+kubectl logs -n microservice app poller -f  (Press Control + C to stop following the logs.)
+Current counter: 50
+Current counter: 63
+Current counter: 74
+Current counter: 89
+Current counter: 96
+Current counter: 107
+
+
+****
+- there are some issues with the current implementation. Because Pods are our smallest union of work, Kubernetes can only scale out by increasing the number of Pods and not the containers inside of the Pod. If we want to scale out the application tier with the current design we have to also scale out all other containers proportionately. This means that there would be multiple Redis containers running, each would have their own copy of the counter. That's certainly not what we're gonna be going for.
+
+- Breaking the application out into multiple Pods and connecting them with services is our ideal implementation.
+
+
+Service Discovery
+=====================================
+
+We'll split our example Microservices application into three pods, one for each tier. 
+Remember that we use the fact that the containers in the same pod can communicate with each other using the local host. But that's not going to work with our multi-pod design.
+
+- Services provide a static end point to access pods in each tier. 
+- We could directly use the individual pod IP addresses on the container network, but that would cause the application to break when pods are restarted, because their IP address could change. 
+
+- An added benefit of Services is they also distribute load across the selected group of pods, allowing us to take advantage of the scaling application tier across multiple server pods. 
+
+- create a data tier service in front of the Redis pod, and an server tier Service in front of the server pod.
+
+- There are two Service discovery mechanisms built into Kubernetes. The first are environment variables, and the second is DNS. 
+	- Kubernetes will automatically inject environment variables into containers that provide the address to access services. The environment variables follow a naming convention so that all you need to know is the name of the service to access it
+	- Kubernetes also constructs DNS records based on the service name and containers are automatically configured to  discover those services.
+	
+- With YAML, we're allowed to create multiple resources by separating them with three hyphens. The resources in the file are created in the order they are listed in the file
+
+
+
+- now we have our Redis pod. Both are named data tier. The pod has a tier label, which is used by the service as its selector. You can include as many labels as necessary in the selector to get just what you need. 
+
+4.1-namespace.yaml
+-------------------
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: service-discovery
+  labels:
+    app: counter	
+	
+
+$ kubectl create -f 4.1-namespace.yaml 
+namespace/service-discovery created
+
+- Services can also publish more than one port, which makes a naming the ports mandatory to identify them. 
+- default type of service is ClusterIP, creates a virtual IP inside the cluster for internal access only.
+
+4.2-data_tier.yaml
+----------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: data-tier
+  labels:
+    app: microservices
+spec:
+  ports:
+  - port: 6379    # target container port
+    protocol: TCP # default 
+    name: redis   # given name to port, optional when only 1 port
+  selector:
+    tier: data 
+  type: ClusterIP # default
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: data-tier
+  labels:
+    app: microservices
+    tier: data
+spec:
+  containers:
+    - name: redis
+      image: redis:latest
+      imagePullPolicy: IfNotPresent
+      ports:
+        - containerPort: 6379
+		
+
+- create via yml now also requirto pass the namespace on which the resources to be created.
+
+$ kubectl create -f 4.2-data_tier.yaml -n service-discovery
+service/data-tier created
+pod/data-tier created
+
+$ kubectl get pod -n service-discovery
+NAME        READY   STATUS    RESTARTS   AGE
+data-tier   1/1     Running   0          7m57s
+
+$ kubectl get service -n service-discovery
+NAME        TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)    AGE
+data-tier   ClusterIP   10.108.33.59   <none>        6379/TCP   8m37s
+
+$ kubectl describe pod -n service-discovery
+- make sure that our service has a clusterIP, and that one endpoint corresponds to the data tier pod selected by the service.
+
+
+
+
+4.3-app_tier.yaml
+--------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: app-tier
+  labels:
+    app: microservices
+spec:
+  ports:
+  - port: 8080
+  selector:
+    tier: app
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: app-tier
+  labels:
+    app: microservices
+    tier: app
+spec:
+  containers:
+    - name: server
+      image: lrakai/microservices:server-v1
+      ports:
+        - containerPort: 8080
+      env:
+        - name: REDIS_URL
+		  value: redis://$(DATA_TIER_SERVICE_HOST):$(DATA_TIER_SERVICE_PORT_REDIS)
+		  
+          # Environment variable service discovery
+          # Naming pattern:
+          #   IP address: <all_caps_service_name>_SERVICE_HOST
+          #   Port: <all_caps_service_name>_SERVICE_PORT
+          #   Named Port: <all_caps_service_name>_SERVICE_PORT_<all_caps_port_name>
+          # In multi-container example value was
+          # value: redis://localhost:6379 
+		  
+- the value of Redis URL environment variable is set using environment variable set by Kubernetes over to service discovery. The value used to be localhost:6379, but now we need to access the data-tier service.
+ 
+- There are separate environment variables made available to you. 
+	- The service cluster IP address is available using the environment variable, following the pattern of a service name in all capital letters, with hyphens replaced by underscores followed by _SERVICE, _HOST in all caps. By knowing the service name you construct the environment variable name, to discover that service IP address. i.e. $(DATA_TIER_SERVICE_HOST) -- here, data-tier is the servivce name.
+	
+	- data tier service port, if the port includes a name, you can also append and underscore port name in all caps, hyphens replaced by underscores.The data tier service only declares one port, so the appended name is optional. i.e. $(DATA_TIER_SERVICE_PORT_REDIS) -- here, data-tier is the servivce name, redis is the port name.
+	
+	- When using environment variables in the value field, you need to enclose the variable name in parentheses and precede it with a dollar sign. 
+	
+	- When using environment variables for service discovery, the service must be created before the pod in order to use environment variables for service discovery. i.e. Kubernetes does not update the variables of running containers. They only get set at startup. 
+	
+	- The service must also be in the same namespace for the environment variables to be available. 
+	
+
+$ kubectl create -n service-discovery -f 4.3-app_tier.yaml
+service/app-tier created
+pod/app-tier created
+
+
+
+4.4-support_tier.yaml
+----------------------
+apiVersion: v1
+kind: Pod
+metadata:
+  name: support-tier
+  labels:
+    app: microservices
+    tier: support
+spec:
+  containers:
+
+    - name: counter
+      image: lrakai/microservices:counter-v1
+      env:
+        - name: API_URL
+          # DNS for service discovery
+          # Naming pattern:
+          #   IP address: <service_name>.<service_namespace>
+          #   Port: needs to be extracted from SRV DNS record
+          value: http://app-tier.service-discovery:8080
+
+    - name: poller
+      image: lrakai/microservices:poller-v1
+      env:
+        - name: API_URL
+          # omit namespace to only search in the same namespace. app-tier is the anme of service backed by the pod (app-tier)
+          value: http://app-tier:$(APP_TIER_SERVICE_PORT)
+		  
+	
+- Now onto the support tier. We don't need a service for this tier, just a pod will do, and it contains the counter and polar containers used before. This time we're gonna be using DNS for service discovery of the app tier service. 
+	
+	- Kubernetes will add a DNS A records for every service. The service DNS names follow the pattern of a service name, dot service namespace. However, if the service is in the same namespace, then you can simply only use the service name. ex: pollar (http://app-tier:$(APP_TIER_SERVICE_PORT))
+	
+	- No need to convert hyphens to underscores, or use all caps when using DNS service discovery. 
+	
+	- You can get service port information using DNS SRV records, but that isn't something that we can use in the manifest file. So I'll have to either hard-code the port information or use the service port environment variable. The counter uses a hard-coded port, and the polar uses the port environment variable for illustration. 
+	
+	
+$ kubectl create -n service-discovery -f 4.4-support_tier.yaml   
+pod/support-tier created
+
+
+$ kubectl get pods -n service-discovery
+NAME           READY   STATUS    RESTARTS   AGE
+app-tier       1/1     Running   0          30s
+data-tier      1/1     Running   0          59m
+support-tier   2/2     Running   0          5m50s
+
+- app-tier has 1 container i.e. the nodeJs server hence: 1/1 ready containers
+- data-tier pod has 1 container i.e. redis hence: 1/1 ready containers
+- support-tier pod has 2 containers i.e. counter and poller, hence 2/2 ready containers
+
+- There are 3 running pods creating 4 containers in total. 
+
+
+$ kubectl logs -n service-discovery support-tier poller
+Current counter: 8
+Current counter: 16
+Current counter: 34
+Current counter: 46
+Current counter: 51
+Current counter: 67
+Current counter: 79
+Current counter: 87
+Current counter: 104
+Current counter: 111
+Current counter: 119
+Current counter: 128
+
+$ kubectl logs -n service-discovery support-tier counter
+Incrementing counter by 8 ...
+Incrementing counter by 4 ...
+Incrementing counter by 4 ...
+Incrementing counter by 9 ...
+Incrementing counter by 9 ...
+Incrementing counter by 4 ...
+Incrementing counter by 8 ...
+Incrementing counter by 2 ...
+Incrementing counter by 3 ...
+Incrementing counter by 8 ...
+Incrementing counter by 8 ...
+Incrementing counter by 2 ...
+
+
+NOTE:
+** When using environment variables for service discovery, the service must be created for the pod, before the pod, in order to use the environment variables for that service discovery.
+
+** DNS records overcome the shortcomings of environment variables (service must also be in the exact same namespace). DNS records are added and removed from the clusters DNS as services are created and destroyed. 
+
+** The DNS name for services include a namespace, allowing communication with services and other namespaces. 
+
+
+
+
+Deployments
+====================================
+- You're not really supposed to create pods directly. instead, a pod is really just a building block. They should be created via a higher level abstraction such as deployments. 
+
+- A deployment represents multiple replicas of a pod. a deployment is a template for creating pods. Pods in their deployment are identical, and within a deployment's manifest, you embed a pod template that has the same fields as this pod spec
+
+- we escribe a state in the deployment, ex: 5 pod replicas of Redis version 5, and Kubernetes takes the steps required to bring the actual state of the cluster to that desired state that you've specified. If for some reason one of the 5 replica pods is deleted, Kubernetes will automatically create a new one to replace it. 
+	- You can also modify the desired state and Kubernetes will converge the actual state to that desired state. 
+	
+- The Kubernetes master components include a deployment controller that takes care of managing the deployment.
+
+- a deployment is a template for creating pods. A template is used to create replicas, and a replica is a copy of a pod. Applications scale by creating more replicas. 
+
+- The deployment spec contains deployment-specific settings and also a pod template, which has exactly the same pod spec 
+	
+- the replica key sets how many pods to create for this particular deployment. Kubernetes will keep this number of pods running. defaulted to 1.
+
+- deployments use label selectors to group pods that are in the deployment. The matchLabels mapping should overlap with the labels declared in the pod template
+
+- the metadata doesn't need a name in the template because Kubernetes generates unique names for each pod in the deployment.
+
+
+5.1-namespace.yaml
+--------------------
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: deployments
+  labels:
+    app: counter
+
+$ kubectl create -f 5.1-namespace.yaml
+namespace/deployments created
+
+5.2-data_tier.yaml
+----------------------------------------
+apiVersion: v1  # core API group
+kind: Service
+metadata:
+  name: data-tier
+  labels:
+    app: microservices
+spec:
+  ports:
+  - port: 6379    # target comtainer port
+    protocol: TCP # default 
+    name: redis   # optional when only 1 port
+  selector:
+    tier: data 
+  type: ClusterIP # default
+---
+apiVersion: apps/v1 # apps API group
+kind: Deployment
+metadata:
+  name: data-tier
+  labels:
+    app: microservices
+    tier: data
+spec: # deployment spec
+  replicas: 1
+  selector:
+    matchLabels: # should match with pod labels
+      tier: data
+  template:
+    metadata:
+      labels:
+        app: microservices
+        tier: data
+    spec: # Pod spec
+      containers:
+      - name: redis
+        image: redis:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+          - containerPort: 6379
+		  
+
+5.3-app_tier.yaml
+----------------------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: app-tier
+  labels:
+    app: microservices
+spec:
+  ports:
+  - port: 8080
+  selector:
+    tier: app
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-tier
+  labels:
+    app: microservices
+    tier: app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      tier: app
+  template:
+    metadata:
+      labels:
+        app: microservices
+        tier: app
+    spec:
+      containers:
+      - name: server
+        image: lrakai/microservices:server-v1
+        ports:
+          - containerPort: 8080
+        env:
+          - name: REDIS_URL
+            # Environment variable service discovery
+            # Naming pattern:
+            #   IP address: <all_caps_service_name>_SERVICE_HOST
+            #   Port: <all_caps_service_name>_SERVICE_PORT
+            #   Named Port: <all_caps_service_name>_SERVICE_PORT_<all_caps_port_name>
+            value: redis://$(DATA_TIER_SERVICE_HOST):$(DATA_TIER_SERVICE_PORT_REDIS)
+            # In multi-container example value was
+            # value: redis://localhost:6379 		  
+		  
+
+5.4-support_tier.yaml
+----------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: support-tier
+  labels:
+    app: microservices
+    tier: support
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      tier: support
+  template:
+    metadata:
+      labels:
+        app: microservices
+        tier: support
+    spec:
+        containers:
+
+        - name: counter
+          image: lrakai/microservices:counter-v1
+          env:
+            - name: API_URL
+              # DNS for service discovery
+              # Naming pattern:
+              #   IP address: <service_name>.<service_namespace>, no need to convert - to _ or to uppercase.
+              #   Port: needs to be extracted from SRV DNS record
+              value: http://app-tier.deployments:8080
+
+        - name: poller
+          image: lrakai/microservices:poller-v1
+          env:
+            - name: API_URL
+              # omit namespace to only search in the same namespace
+              value: http://app-tier:$(APP_TIER_SERVICE_PORT)
+
+
+- first delete the previous keyspaces.
+$ kubectl delete namespace service-discovery
+namespace "service-discovery" deleted
+
+$ kubectl delete namespace microservice     
+namespace "microservice" deleted
+
+$ kubectl create -n deployments -f 5.2-data_tier.yaml -f 5.3-app_tier.yaml -f 5.4-support_tier.yaml
+service/data-tier created
+deployment.apps/data-tier created
+service/app-tier created
+deployment.apps/app-tier created
+deployment.apps/support-tier created
+
+
+$ kubectl get -n deployments deployments
+NAME           READY   UP-TO-DATE   AVAILABLE   AGE
+app-tier       0/1     1            0           1s
+data-tier      0/1     1            0           2s
+support-tier   0/1     1            0           1s
+
+- shows all the deployment objects created in deployments namespace.
+- Note that each pod has a hash at the end of it.
+
+$ kubectl get -n deployments pods
+NAME                            READY   STATUS    RESTARTS   AGE
+app-tier-694f678b68-qfnd7       1/1     Running   0          52s
+data-tier-b4fd9dff9-9bbmp       1/1     Running   0          52s
+support-tier-6d954fd9f5-24r9k   2/2     Running   0          52s
+
+- Deployments add this uniqueness to the pod names, automatically allowing us to identify pods of a particular deployment version. running more than one replica in a deployment will cause different hash for the pod names.
+
+
+- kubectrl scale command for modifying replica counts. The scale command is equivalent to editing the replica value in the manifest file and then running kubectrl apply to apply the change.
+
+- Deployments ensure that the specified number of replica pods are kept running. deleting the pods by "kubectl delete -n <namespace_name> pod <pod_name>" would cause Kubernetes brings them back again and running.
+
+- Kubernetes can resurrect pods and make sure the application runs the intended number of pods.
+
+- Use the Linux watch command with the - n 1 option to update the output every one second.
+
+- Kubectrl also supports watching by using the w option and any changes are appended to the bottom of the output compared to overriding the entire output with the Linux watch command.
+
+- the scale command scale out the app tier to five replicas
+syntax: kubectrl scale -n <namespace_name> deployment <deployment_name> --replicas=<desired_no>
+
+$ kubectl scale -n deployments deployment support-tier --replicas=5
+deployment.apps/support-tier scaled
+
+
+kubectl get -n deployments deployment support-tier
+NAME           READY   UP-TO-DATE   AVAILABLE   AGE
+support-tier   5/5     5            5           4m23s
+
+$ kubectl -n deployments get pods
+NAME                            READY   STATUS    RESTARTS   AGE
+app-tier-694f678b68-qfnd7       1/1     Running   0          4m41s
+data-tier-b4fd9dff9-9bbmp       1/1     Running   0          4m41s
+support-tier-6d954fd9f5-24r9k   2/2     Running   0          4m41s
+support-tier-6d954fd9f5-d7lm6   2/2     Running   0          65s
+support-tier-6d954fd9f5-krwkh   2/2     Running   0          65s
+support-tier-6d954fd9f5-tcj9j   2/2     Running   0          65s
+support-tier-6d954fd9f5-xzcvd   2/2     Running   0          65s
+
+$ ubectl delete -n deployments pods support-tier-6d954fd9f5-tcj9j support-tier-6d954fd9f5-xzcvd
+pod "support-tier-6d954fd9f5-tcj9j" deleted
+pod "support-tier-6d954fd9f5-xzcvd" deleted
+
+- use the linux watch command OR kubectl with -w option, to see how Kubernetes bring new pods.
+$ watch -n 1 kubectl -n deployments get pods
+OR
+$ kubectl get -n deployments pods -w
+NAME                            READY   STATUS    RESTARTS   AGE
+app-tier-694f678b68-qfnd7       1/1     Running   0          9m23s
+data-tier-b4fd9dff9-9bbmp       1/1     Running   0          9m23s
+support-tier-6d954fd9f5-24r9k   2/2     Running   0          9m23s
+support-tier-6d954fd9f5-cjrzg   2/2     Running   0          104s
+support-tier-6d954fd9f5-d7lm6   2/2     Running   0          5m47s
+support-tier-6d954fd9f5-dfjb9   2/2     Running   0          104s
+support-tier-6d954fd9f5-krwkh   2/2     Running   0          5m47s
+
+
+- Kubernetes makes it really quite painless. and now we can confirm that the support-tier service is load balancing requests across the multiple support-tier pods by describing the service.
+
+
+- scale the app-tier pods replicas to 5
+$ kubectl scale -n deployments deployment app-tier --replicas=5
+deployment.apps/app-tier scaled
+
+$ kubectl get -n <namespace_name> pods -w OR kubectl -n <namespace_name> get pods --watch (this command appends the latest state instead of overriding the entire o/p)
+$ kubectl get -n deployments pods -w
+NAME                            READY   STATUS              RESTARTS   AGE
+app-tier-694f678b68-2fp8v       0/1     ContainerCreating   0          5s
+app-tier-694f678b68-8zkdg       0/1     ContainerCreating   0          5s
+app-tier-694f678b68-h5cch       0/1     ContainerCreating   0          5s
+app-tier-694f678b68-jj2n5       0/1     ContainerCreating   0          5s
+app-tier-694f678b68-qfnd7       1/1     Running             0          10m
+data-tier-b4fd9dff9-9bbmp       1/1     Running             0          10m
+support-tier-6d954fd9f5-24r9k   2/2     Running             0          10m
+support-tier-6d954fd9f5-cjrzg   2/2     Running             0          2m59s
+support-tier-6d954fd9f5-d7lm6   2/2     Running             0          7m2s
+support-tier-6d954fd9f5-dfjb9   2/2     Running             0          2m59s
+support-tier-6d954fd9f5-krwkh   2/2     Running             0          7m2s
+app-tier-694f678b68-8zkdg       1/1     Running             0          15s
+app-tier-694f678b68-jj2n5       1/1     Running             0          16s
+app-tier-694f678b68-2fp8v       1/1     Running             0          16s
+app-tier-694f678b68-h5cch       1/1     Running             0          17s
+
+
+- Now descrive the app-tier service to see how it is load balancing to 5 app-tier pods. observe that the service now has five endpoints (172.17.0.14:8080, 172.17.0.15:8080, 172.17.0.18:8080 ..... ) matching the number of pods in said deployment
+syntax: kubectrl describe -n <namespace_name> service <service_name>
+
+$ kubectl describe -n deployments service app-tier
+Name:              app-tier
+Namespace:         deployments
+Labels:            app=microservices
+Annotations:       <none>
+Selector:          tier=app
+Type:              ClusterIP
+IP Families:       <none>
+IP:                10.101.168.97
+IPs:               10.101.168.97
+Port:              <unset>  8080/TCP
+TargetPort:        8080/TCP
+Endpoints:         172.17.0.14:8080,172.17.0.15:8080,172.17.0.18:8080 + 2 more...
+Session Affinity:  None
+Events:            <none>
+
+
+Autoscaling
+============================================
+- it would be nice to not have to manually scale the deployment. That's where autoscaling comes in.
+
+- Kubernetes supports CPU-based autoscaling and autoscaling based on a custom metric that you can define.
+
+- Autoscaling works by specifying a desired target CPU percentage and a minimum and a maximum number of allowed replicas. The CPU percentage is expressed as a percentage of the CPU resource request of that Pod. 
+- can set resource requests for CPU to ensure that they're scheduled on a node with at least that much CPU available. If no CPU request is set, autoscaling won't take any action.
+
+- Kubernetes will increase or decrease the number of replicas according to the average CPU usage of all of the replicas
+
+- The autoscaler will also increase the number of replicas when the actual CPU usage of the current Pods exceeds the target and vice versa for decreasing the number of Pods.
+
+- With the defaults, the autoscaler will compare the actual CPU usage to the target CPU usage. And either increase the replicas if the actual CPU is sufficiently higher than the target, or it will decrease the replicas if the actual CPU is sufficiently below the target. 
+
+- Autoscaling depends on metrics being collected in the cluster. Kubernetes integrates with several solutions for collecting metrics. 
+	- using the Metrics Server which is a solution that is maintained by Kubernetes itself.
+	- There are several manifest files on the Kubernetes Metrics Server GitHub repo that declare all of the resources. We will need to get Metrics Server up and running before we can use autoscaling.
+	- Once Metrics Server is running, autoscalers will retrieve those metrics and then make calls with the Kubernetes metrics API.
+	
+
+$ kubectl top pods -n <namespace_name>
+- this top command list the CPU and memory uses of each pod in the namespace. You can use the top command to benchmark a pod's resource utilization, and then subsequently debug resource utilization issues.
+- The m stands for milli. 1000 milli CPUs equals one CPU.
+
+
+https://github.com/cloudacademy/intro-to-k8s/tree/master/src/metrics-server has checked-in all the yamls for Metric Server,
+$ kubectl apply -f metrics-server/
+- this will create all of the resources within the Metrics Server folder.
+- One of these, in the Metrics Server deployment, runs actually as a pod in the cluster. It takes a minute or two for the first metrics to start trickling in.
+
+
+6.1-app_tier_cpu_request.yaml
+----------------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: app-tier
+  labels:
+    app: microservices
+spec:
+  ports:
+  - port: 8080
+  selector:
+    tier: app
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-tier
+  labels:
+    app: microservices
+    tier: app
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      tier: app
+  template:
+    metadata:
+      labels:
+        app: microservices
+        tier: app
+    spec:
+      containers:
+      - name: server
+        image: lrakai/microservices:server-v1
+        ports:
+          - containerPort: 8080
+        resources:
+          requests:
+            cpu: 20m # 20 milliCPU / 0.02 CPU
+        env:
+          - name: REDIS_URL
+            # Environment variable service discovery
+            # Naming pattern:
+            #   IP address: <all_caps_service_name>_SERVICE_HOST
+            #   Port: <all_caps_service_name>_SERVICE_PORT
+            #   Named Port: <all_caps_service_name>_SERVICE_PORT_<all_caps_port_name>
+            value: redis://$(DATA_TIER_SERVICE_HOST):$(DATA_TIER_SERVICE_PORT_REDIS)
+            # In multi-container example value was
+            # value: redis://localhost:6379 
+			
+- Each pod will now request 20 milli CPU. Kubernetes will only scale the pods and each node with at least 0.02 CPU's remaining. also 5 replicas running.
+
+- if we try to create the resources (app-tier deployment and app-tier service), kubectl will tell us that they actually already exist. Create will check if a resource of a given type and name already exists and it will fail if it does. 
+
+$ kubectl -n deployments create -f 6.1-app_tier_cpu_request.yaml
+Error from server (AlreadyExists): error when creating "6.1-app_tier_cpu_request.yaml": services "app-tier" already exists
+Error from server (AlreadyExists): error when creating "6.1-app_tier_cpu_request.yaml": deployments.apps "app-tier" already exists
+
+- We could delete the deployment and then recreate it but it would be nice to avoid the downtime that is involved. Instead, Kubernetes provides a command that can apply changes to existing resources
+
+- Apply will update our deployment to include the CPU request. It will warn us about mixing create and apply, but we can go ahead and ignore that. 
+
+$ kubectl apply -n deployments -f 6.1-app_tier_cpu_request.yaml
+Warning: resource services/app-tier is missing the kubectl.kubernetes.io/last-applied-configuration annotation which is required by kubectl apply. kubectl apply should only be used on resources created declaratively by either kubectl create --save-config or kubectl apply. The missing annotation will be patched automatically.
+service/app-tier configured
+Warning: resource deployments/app-tier is missing the kubectl.kubernetes.io/last-applied-configuration annotation which is required by kubectl apply. kubectl apply should only be used on resources created declaratively by either kubectl create --save-config or kubectl apply. The missing annotation will be patched automatically.
+deployment.apps/app-tier configured
+
+- this will create 5 replicas of app-tier POD. 5 actual pods are ready matching the 5 pods we desired. 
+
+$ kubectl -n deployments get deployments app-tier -w
+NAME       READY   UP-TO-DATE   AVAILABLE   AGE
+app-tier   5/5     5            5           9h
+
+
+- The autoscaler, which has the full name of HorizontalPodAutoscaler because it scales out horizontally, it's just another resource in Kubernetes we can use a manifest to declare. 
+	- The HorizontalPodAutoscaler kind is part of the autoscaling/v1 API.
+	- It's spec includes a min and max to set and lower the upper bounds on running replicas. 
+	- The targetCPUUtilizationPercentage field sets the target average CPU percentage across the replicas.
+	- With the target set to 70%, Kubernetes will decrease the number of replicas if the average CPU utilization is 63% or below and increase replicas if it is 77% or higher.
+	- the spec also includes a scale target reference, that identifies what is actually scaling. 
+	- below is autoscaler manifest yml.
+
+6.2-autoscale.yaml
+---------------------
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: app-tier
+  labels:
+    app: microservices
+    tier: app
+spec:
+  maxReplicas: 5
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: app-tier
+  targetCPUUtilizationPercentage: 70
+
+# Equivalent to
+# kubectl autoscale deployment app-tier --max=5 --min=1 --cpu-percent=70
+
+
+$ kubectl -n deployments create -f 6.2-autoscale.yaml
+
+- as soon as the autoscaler is created which has the horizontal autoscaling strategy based on targetCPUUtilizationPercentage ~ 70, watchinh the no. of app-tier pods in deployment namespace will show, decreasing the no. of replicas to 1 (min) as the CPU utilization is less than 70%
+
+- We can also describe the HorizontalPodAutoscaler to see what events took place. Now, it would be painful to type out pod autoscaler many times, but fortunately kubectl accept shorthand notations for resource types.
+
+$ kubectl api-resources 
+- shows full list of those shorthand notations. The output is sorted by the API group that appears in the third column. 
+- hpa as the short name for autoscaling resource horizontalpodautoscalers
+
+
+$ kubectl describe -n <namespace_name> hpa
+- can see the successful rescale events and the current metrics are all below the target.
+
+$ kubectl get -n deployments hpa
+- get the HorizontalPodAutoscaler for a quick summary
+- The first number in the target expresses the current average CPU utilization as a percentage of the CPU request. 
+
+
+
+Rolling Updates and Rollbacks
+==========================================
+- how updates of deployments work
+
+- Kubernetes uses rollouts to update deployments. Kubernetes rollout is a process of updating or replacing replicas with new replicas matching a new deployment template.  a course, incurs downtime.
+	
+- all of our scaling events do not create roll-outs.
+
+Rolling Updates
+-----------------
+- Default rollout strategy.
+- Replicas are updated in groups, instead of all at once until the rollout is complete.
+- Both old and new version running for sometime.
+- Alternative is re-create strategy i.e. stop all old and start new version. but require downtime.
+- Scalling is not a rollout.
+
+- Changes may be configurations such as environment variables or labels, or also code changes which result in the updating of an image key of the deployment template. In a nutshell, any change to the deployment's template will trigger a rollout.
+
+- Deployments have different rollout strategies, Kubernetes uses rolling updates by default. Replicas are updated in groups, instead of all at once until the rollout is complete. This allows service to continue uninterrupted while the update is being rolled out. However, you need to consider that during the rollout there will be pods using both the old and new configuration of the application. In such, it should gracefully handle that.
+
+	- As an alternative, deployments can also be configured to use the recreate strategy which kills all of the old template pods before creating the new ones. 
+
+- Kubectl includes commands to conveniently check, pause, resume, and rollback rollouts. 
+
+- We'll use our deployments namespace again and focus on the app tier deployment.
+- delete the existing auto scaling configuration. Auto-scaling and rollouts are compatible, but for us to easily observe rollouts as they progress we'll need many replicas in action. Deleting the autoscaler is going to help us with that.
+
+$ kubectl delete -n <namespace_name> <deployment_name1> <deployment_name2>
+
+$ kubectl delete -n deployments hpa app-tier
+
+
+-  edit the app-tier deployment. kubectl edit deployment shows the raw deployment template, change the replicas from 2 to 10, to see the raw in action with a large number of replicas. also remove the resource request to avoid any potential problems with scheduling the replicas if all 10 of the CPU requests can be satisfied. 
+
+$ kubectl edit -n deployments deployment app-tier
+
+
+
+Probes
+===========================================
+Kubernetes assumes that a Pod was ready as the container was started, but that's not always true. For example, if the container needs time to warm up Kubernetes should wait before sending any traffic to the new Pod. It's also possible that a Pod is fully operational but after some time it becomes non-responsive. For example, if it enters a deadlock state, Kubernetes shouldn't send any more requests to that Pod and will be better off to restart a new Pod.
+
+- 2 types of probe/health checks
+	- "readiness probes"
+	- "liveness probes"
+
+- Kubernetes provides probes to remedy both of these scenarios and probes are sometimes referred to as health checks.
+
+- containers in Pods can declare "readiness probes" to allow Kubernetes to monitor when they're ready to serve traffic and when they should temporarily be taken out of service. ex: The Pod may need time to warm caches or load configurations.
+	- Readiness probes can monitor the containers until they are ready to serve traffic.
+	- readiness probes are also useful long after startup. For example, if the Pod depends on an external service and as service goes down, it's not worth sending traffic to that Pod since it can't complete it until the external service is back.
+
+- Containers in Pods can declare a liveliness probes to allow Kubernetes to detect when they have entered a broken state and the Pod should be restarted.
+	- used to detect when a Pod has entered a broken state and can no longer serve traffic. In this case, Kubernetes will restart the Pod for you.
+
+- Readiness probes determine when a service can start sending traffic to a Pod after the Pod was created, because it is temporarily not ready yet and a liveness probe decides when a Pod should be restarted because it won't come back to life. 
+	- just have to decide which course of action is appropriate if a probe fails. Stop serving traffic or restart.
+
+- Services are our load balancers in Kubernetes. probes integrate with services to ensure that traffic doesn't flow to Pods that aren't ready.
+	- Readiness probes control the ready condition of a Pod. If a readiness probe succeeds, the ready condition is true, else, it is false. Services use the ready condition to determine if the Pod should be sent traffic.
+
+
+- Probes can be declared on containers in a Pod.
+	- All of the Pod's container probes must pass for the Pod to pass.
+	
+- can define any of the following as the action probe to check the container. 
+	- A simple command that runs inside of a container, The command probes succeeds if the exit code of the command is zero, else, it will fail.
+	- an HTTP GET request, A GET request succeeds if the response code is between 200 and 399.
+	- the opening of a TCP socket, A TCP socket probes succeeds if a connection can be established. 
+	- By default, the probes check the Pods every 10 seconds.
+
+7.1-namespace.yaml
+-----------------------
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: probes
+  labels:
+    app: counter
+	
+	
+$ kubectl create -f 7.1-namespace.yaml
+
+
+7.2-data_tier.yaml
+----------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: data-tier
+  labels:
+    app: microservices
+spec:
+  ports:
+  - port: 6379
+    protocol: TCP # default 
+    name: redis # optional when only 1 port
+  selector:
+    tier: data 
+  type: ClusterIP # default
+---
+apiVersion: apps/v1 # apps API group
+kind: Deployment
+metadata:
+  name: data-tier
+  labels:
+    app: microservices
+    tier: data
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      tier: data
+  template:
+    metadata:
+      labels:
+        app: microservices
+        tier: data
+    spec: # Pod spec
+      containers:
+      - name: redis
+        image: redis:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+          - containerPort: 6379
+            name: redis
+		livenessProbe:
+          tcpSocket:
+            port: redis # named port
+          initialDelaySeconds: 15
+        readinessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 5
+		
+		  
+
+$ kubectl create -n probes -f 7.2-data_tier.yaml
+
+- The data tier contains one redis container. 
+	- The redis container is ready, if it responds to redis commands such as get or ping.
+		- the readiness probe uses the exact type of probe to specify command. What this does, is runs a command inside the container similar to docker exec.
+		- The redis-cli ping command test if the server is up and is ready to actually process redis specific calls. Commands are specified as a list of strings.
+		
+	- This container is alive if it accepts TCP connections. 
+		- The liveliness probe uses the TCP socket type of the probe in this example, and by using a named port, we can simply write the name rather than the port number. This will protect us in the future if the port number ever changes and someone forgets to update the probe port number.
+		- Also, by setting the initial delay seconds, we give the redis server an adequate time to start.
+		- We can also configure failure threshold, delays and timeouts for all probes.
+
+	- Given the consequences of failing a liveness probe is going to be restarting a Pod. It's generally advisable to have the liveness probe at a high delay than the readiness probe
+	
+	- by default three sequential probes need to fail before a probe is marked as failed, so that we have some buffer. Kubernetes won't immediately restart the Pod the first time the probe fails, but we can configure it that way if we need to.
+	
+	- ** Note: Having the readiness initial delay too high will prevent Pods that are able to handle traffic from receiving any. 
+
+
+$ kubectl -n probes get deployments -w
+- watch the deployment, how it comeup after the specified delays.
+- With the watch option, new changes are appended to the bottom of the output
+- if something goes wrong, use lubectl describe and logs commands to debug the issue. 
+
+*** Unfortunately, failed probe events don't show in the events output but you can use the Pod restart counter as an indicator of failed liveness probes. but kubectllogs show all the details information.
+
+
+
+7.3-app_tier.yaml
+--------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: app-tier
+  labels:
+    app: microservices
+spec:
+  ports:
+  - port: 8080
+  selector:
+    tier: app
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-tier
+  labels:
+    app: microservices
+    tier: app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      tier: app
+  template:
+    metadata:
+      labels:
+        app: microservices
+        tier: app
+    spec:
+      containers:
+      - name: server
+        image: lrakai/microservices:server-v1
+        ports:
+          - containerPort: 8080
+            name: server
+        env:
+          - name: REDIS_URL
+            # Environment variable service discovery
+            # Naming pattern:
+            #   IP address: <all_caps_service_name>_SERVICE_HOST
+            #   Port: <all_caps_service_name>_SERVICE_PORT
+            #   Named Port: <all_caps_service_name>_SERVICE_PORT_<all_caps_port_name>
+            value: redis://$(DATA_TIER_SERVICE_HOST):$(DATA_TIER_SERVICE_PORT_REDIS)
+            # In multi-container example value was
+            # value: redis://localhost:6379 
+          - name: DEBUG
+            value: express:*
+        livenessProbe:
+          httpGet:
+            path: /probe/liveness
+            port: server
+          initialDelaySeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /probe/readiness
+            port: server
+          initialDelaySeconds: 3
+
+$ kubectl -n probe create -f 7.3-app_tier.yaml
+
+$ kubectl -n probe get deployments app-tier -w
+
+
+
+- the nodejs server (app-tier) may be alive but not necessarily ready to handle incoming requests. The API server is alive if it accepts HTTP request but the API server is only ready if it is online and has a connection to redis to request an increment, the counter. 
+	- The sample application has a path for each of these probes. The counter and polar containers are live and ready if they can make an HTTP request back to the API server.
+	
+	- Notice that the debug environment variable has been added which will cause all the service requests to be logged. this environment variable is specific to the sample application, not for general purpose settings.
+	- name: DEBUG
+      value: express:*
+			
+	- The liveness probe endpoint (GET /probe/liveness) does not actually communicate with redis. It's a dummy that will always return 200
+	
+	- readiness probe endpoint (GET /probe/readiness) checks that the data tier is available
+
+
+$ kubectl -n probes get pods
+
+$ kubectl -n probes logs app-toer-7a4sshj829-wdh67 | cut -d'' -f5,8-11
+
+- We can see that Kubernetes is firing both probes in 10-second intervals. With the help of these probes, communities can take Pods out of service when they aren't ready and restart them when they enter a broken state. 
+
+
+
+Init Containers
+=====================================
+
+Remember that probes kick in after containers are started. Sometimes you need to perform some tasks or check some prerequisites before a main application container starts.ex: waiting for a service to be created, downloading files, or dynamically deciding which port the application is going to use.
+
+The code that performs those tasks could be crammed into the main application, but it is better to keep a clean separation between the main application and supporting functionality to keep the smallest footprint you can for the images.
+
+However, the tasks are closely linked to the main application and are required to run before the main application starts.
+
+- Kubernetes provides us with an init container as a way to run these tasks that are required to complete before our main container starts.
+
+- Pods may declare any number of init containers. They run in a sequence in the order they are declared. Each init container must run to completion before the following init container begins. And once all of the init containers have completed the main containers in the pods can start.
+
+- Init containers use different images from the containers in the pod, and this can provide some benefits. They can contain utilities that are not desirable to include in the actual application image for security reasons. They can also contain utilities or custom code for setup that is not present in the application image. For example, there is no need to include utilities like sed or awk or dig in an application image if they are only used for setup.
+
+- Init containers also provide an easy way to block or delay the start-up of an application until some pre-conditions are met. They are similar to readiness probes in this sense but only run at pod startup. 
+
+- *** They run every time a pod is created. This means they will run once for every replica in a deployment. And if a pod restarts, to say, due to failed live-ness probes the init containers would run again as part of that restart. Running it more than once should have no additional effect.
+
+- Let's add an init container to our app tier that will wait for Reddis before starting any application.
+
+- init containers have the same field as regular containers in a pod spec.
+	- The one exception is init containers do not support readiness probes because they MUST run to completion before the state of the pod can be considered ready. You will receive an error if you try to include a readiness probe in an init container.
+	
+- We'll just be updating the app to your deployment, so we won't make a new namespace. 
+
+- to see the difference of init containres between these 2 manifest files
+$ diff -y 7.3-app_tier.yaml 8.1-app_tier.yaml
+
+  initContainers:
+	- name: await-redis
+	  image: lrakai/microservices:server-v1
+	  env:
+	  - name: REDIS_URL
+		value: redis://$(DATA_TIER_SERVICE_HOST):$(DATA_TIER_SERVICE_PORT_REDIS)
+	  command:
+		- npm
+		- run-script
+		- await-redis
+
+
+
+8.1-app_tier.yaml
+---------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: app-tier
+  labels:
+    app: microservices
+spec:
+  ports:
+  - port: 8080
+  selector:
+    tier: app
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-tier
+  labels:
+    app: microservices
+    tier: app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      tier: app
+  template:
+    metadata:
+      labels:
+        app: microservices
+        tier: app
+    spec:
+      containers:
+      - name: server
+        image: lrakai/microservices:server-v1
+        ports:
+          - containerPort: 8080
+            name: server
+        env:
+          - name: REDIS_URL
+            # Environment variable service discovery
+            # Naming pattern:
+            #   IP address: <all_caps_service_name>_SERVICE_HOST
+            #   Port: <all_caps_service_name>_SERVICE_PORT
+            #   Named Port: <all_caps_service_name>_SERVICE_PORT_<all_caps_port_name>
+            value: redis://$(DATA_TIER_SERVICE_HOST):$(DATA_TIER_SERVICE_PORT_REDIS)
+            # In multi-container example value was
+            # value: redis://localhost:6379 
+          - name: DEBUG
+            value: express:*
+        livenessProbe:
+          httpGet:
+            path: /probe/liveness
+            port: server
+          initialDelaySeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /probe/readiness
+            port: server
+          initialDelaySeconds: 3
+      initContainers:
+        - name: await-redis
+          image: lrakai/microservices:server-v1
+          env:
+          - name: REDIS_URL
+            value: redis://$(DATA_TIER_SERVICE_HOST):$(DATA_TIER_SERVICE_PORT_REDIS)
+          command:
+            - npm
+            - run-script
+            - await-redis
+			
+			
+- here in initContainers section, we added the new init container. The command field is used to override the image's default entry point command.
+
+- The script is already included in the image and is executed with the NPM run script await Reddis command. This way the command will block until the connection is established with the configured Reddis URL provided as in an environment variable.
+
+$ kubectl apply -n probes -f 8.1-app_tier.yaml
+
+$ kubectl -n probes get pods
+
+- describe the deployments pod
+$ kibectl describe pods -n probes app-tier-6181bshs87-7181b
+
+- The await Reddis init container runs the completion before the server container is created.
+
+- can also view the logs of init containers using the usual logs command and specifying the name of the init container as the last argument after the pod name.  
+$ kubectl logs -n probes app-tier-6181bshs87-7181b -c await-redis
+
+
+- give you another mechanism for controlling the lifecycle of pods. You can use them to perform some tasks before the main containers have an opportunity to start. This could be useful for checking preconditions, such as checking that depended upon services are created or preparing dependent upon files. The files use case requires knowledge of another Kubernetes concept, namely volumes which can be used to share files between containers.  
+
+
+
+Volumes
+==================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Pods
+------------------------------
+$ kubectl get pods
+No resources found in default namespace.
+
+$ cd src
+
+$ cat 1.1-basic_pod.yaml 
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mypod
+spec:
+  containers:
+  - name: mycontainer
+    image: nginx:latest
+
+
+$ kubectl create -f 1.1-basic_pod.yaml
+pod/mypod created
+
+$ kubectl get pods
+NAME    READY   STATUS    RESTARTS   AGE
+mypod   1/1     Running   0          81s
+
+$ kubectl describe pod mypod
+
+Name:         mypod
+Namespace:    default
+Priority:     0
+Node:         ip-10-0-0-11.us-west-2.compute.internal/10.0.0.11
+Start Time:   Sat, 18 Sep 2021 16:01:49 +0000
+Labels:       <none>
+Annotations:  cni.projectcalico.org/podIP: 192.168.23.129/32
+              cni.projectcalico.org/podIPs: 192.168.23.129/32
+Status:       Running
+IP:           192.168.23.129
+IPs:
+  IP:  192.168.23.129
+Containers:
+  mycontainer:
+    Container ID:   containerd://a5304d2736f508ae941d4abb9c704497d336903bc936e5faf1827b4811834fb5
+    Image:          nginx:latest
+    Image ID:       docker.io/library/nginx@sha256:853b221d3341add7aaadf5f81dd088ea943ab9c918766e295321294b035f3f3e
+    Port:           <none>
+    Host Port:      <none>
+    State:          Running
+      Started:      Sat, 18 Sep 2021 16:02:01 +0000
+    Ready:          True
+    Restart Count:  0
+    Environment:    <none>
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from default-token-kws6w (ro)
+Conditions:
+  Type              Status
+  Initialized       True 
+  Ready             True 
+  ContainersReady   True 
+  PodScheduled      True 
+Volumes:
+  default-token-kws6w:
+    Type:        Secret (a volume populated by a Secret)
+    SecretName:  default-token-kws6w
+    Optional:    false
+QoS Class:       BestEffort
+Node-Selectors:  <none>
+Tolerations:     node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                 node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:
+  Type    Reason     Age    From               Message
+  ----    ------     ----   ----               -------
+  Normal  Scheduled  2m47s  default-scheduler  Successfully assigned default/mypod to ip-10-0-0-11.us-west-2.compute.internal
+  Normal  Pulling    2m46s  kubelet            Pulling image "nginx:latest"
+  Normal  Pulled     2m39s  kubelet            Successfully pulled image "nginx:latest" in 6.569728545s
+  Normal  Created    2m35s  kubelet            Created container mycontainer
+  Normal  Started    2m35s  kubelet            Started container mycontainer
+
+
+$ kubectl describe pod mypod | more
+
+$ kubectl delete pod mypod
+pod "mypod" deleted
+
+$ kubectl create -f 1.2-port_pod.yaml
+pod/mypod created
+
+
+kubectl describe pod mypod | more
+curl 192.168.###.###:80 (Replace ###.### with the IP address octets from the describe output)
+# This command will time out (see the next lesson to understand why)
+
+$ kubectl describe pod mypod | more
+
+$ kubectl delete pod mypod
+
+$ kubectl create -f 1.4-resources_pod.yaml
+
+$ kubectl describe pods mypod
+Name:         mypod
+Namespace:    default
+Priority:     0
+Node:         ip-10-0-0-11.us-west-2.compute.internal/10.0.0.11
+Start Time:   Sat, 18 Sep 2021 16:40:36 +0000
+Labels:       app=webserver
+Annotations:  cni.projectcalico.org/podIP: 192.168.23.132/32
+              cni.projectcalico.org/podIPs: 192.168.23.132/32
+Status:       Running
+IP:           192.168.23.132
+IPs:
+  IP:  192.168.23.132
+Containers:
+  mycontainer:
+    Container ID:   containerd://257259863cc8bcc69ea7655f645a18a520141d2a40cfc527667b4f439508be6d
+    Image:          nginx:latest
+    Image ID:       docker.io/library/nginx@sha256:853b221d3341add7aaadf5f81dd088ea943ab9c918766e295321294b035f3f3e
+    Port:           80/TCP
+    Host Port:      0/TCP
+    State:          Running
+      Started:      Sat, 18 Sep 2021 16:40:38 +0000
+    Ready:          True
+    Restart Count:  0
+    Limits:
+      cpu:     500m
+      memory:  128Mi
+    Requests:
+      cpu:        500m
+      memory:     128Mi
+    Environment:  <none>
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from default-token-kws6w (ro)
+Conditions:
+  Type              Status
+  Initialized       True 
+  Ready             True 
+  ContainersReady   True 
+  PodScheduled      True 
+Volumes:
+  default-token-kws6w:
+    Type:        Secret (a volume populated by a Secret)
+    SecretName:  default-token-kws6w
+    Optional:    false
+QoS Class:       Guaranteed
+Node-Selectors:  <none>
+Tolerations:     node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                 node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:
+  Type    Reason     Age    From               Message
+  ----    ------     ----   ----               -------
+  Normal  Scheduled  2m16s  default-scheduler  Successfully assigned default/mypod to ip-10-0-0-11.us-west-2.compute.internal
+  Normal  Pulling    2m15s  kubelet            Pulling image "nginx:latest"
+  Normal  Pulled     2m14s  kubelet            Successfully pulled image "nginx:latest" in 668.486804ms
+  Normal  Created    2m14s  kubelet            Created container mycontainer
+  Normal  Started    2m14s  kubelet            Started container mycontainer
+	
+look for "QoS Class: Guaranteed"
+
+
+
+Services
+---------------------------------------------
+$ kubectl create -f 2.1-web_service.yaml
+service/webserver created
+
+$ kubectl get services
+NAME         TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)        AGE
+kubernetes   ClusterIP   10.96.0.1        <none>        443/TCP        144d
+webserver    NodePort    10.103.117.223   <none>        80:31100/TCP   16m
+
+$ kubectl describe service webserver
+Name:                     webserver
+Namespace:                default
+Labels:                   app=webserver
+Annotations:              <none>
+Selector:                 app=webserver
+Type:                     NodePort
+IP Families:              <none>
+IP:                       10.103.117.223
+IPs:                      10.103.117.223
+Port:                     <unset>  80/TCP
+TargetPort:               80/TCP
+NodePort:                 <unset>  31100/TCP
+Endpoints:                192.168.23.132:80
+Session Affinity:         None
+External Traffic Policy:  Cluster
+Events:                   <none>
+
+$ kubectl get nodes
+NAME                                       STATUS   ROLES                  AGE    VERSION
+ip-10-0-0-10.us-west-2.compute.internal    Ready    <none>                 64m    v1.20.6
+ip-10-0-0-100.us-west-2.compute.internal   Ready    control-plane,master   144d   v1.20.6
+ip-10-0-0-11.us-west-2.compute.internal    Ready    <none>                 63m    v1.20.6
+
+$ kubectl describe nodes | grep -i addresses -A 1
+Addresses:
+  InternalIP:   10.0.0.10
+--
+Addresses:
+  InternalIP:   10.0.0.100
+--
+Addresses:
+  InternalIP:   10.0.0.11
+
+curl 10.0.0.100:3#### (replace #### with the actual port digits)
+
+
+
+	
