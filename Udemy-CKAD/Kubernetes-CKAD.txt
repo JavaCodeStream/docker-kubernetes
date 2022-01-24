@@ -55,7 +55,7 @@ describe pod and look at its containers
 
 
 create a manifest file using dryrun flag, dry-run=client allows not create the pod instead redirect the definition to yaml file.
-- kubectl run redis --image=redis123 --dry-run=client -o yaml < redis-pod-definition.yaml
+- kubectl run redis --image=redis123 --dry-run=client -o yaml > redis-pod-definition.yaml
 - kubectl apply -f <redis-pod-definition.yaml>  // create the pod using apply
 
 edit and rerun pod creation
@@ -7512,19 +7512,433 @@ Deployment Strategy - Canary
 
 
 
+myapp-deployment-primary.yaml
+---------------------------
+apiVresion: v1
+kind: Deployment
+metadata:
+  name: myapp-primary
+  labels:
+    app: myapp
+	type: front-end
+spec:
+  template:
+    metadata:
+	  name: myapp-pod
+	  labels:
+	    version: v1
+		app: front-end
+	spec:
+	  containers:
+	  - name: app-container
+	    image: myapp-image:1.0
+	replicas: 5
+	selector:
+	  matchLabels:
+	    type: front-end
+		
+
+myapp-service.yaml
+------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: myapp-service
+spec:
+  selector:
+    app: front-end
+
+myapp-deployment-canary.yaml
+---------------------------
+apiVresion: v1
+kind: Deployment
+metadata:
+  name: myapp-canary
+  labels:
+    app: myapp
+	type: front-end
+spec:
+  template:
+    metadata:
+	  name: myapp-pod
+	  labels:
+	    version: v2
+		app: front-end
+	spec:
+	  containers:
+	  - name: app-container
+	    image: myapp-image:2.0
+	replicas: 1
+	selector:
+	  matchLabels:
+	    type: front-end
+		
+myapp-service.yaml
+------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: myapp-service
+spec:
+  selector:
+    app: front-end
+	
+
+- few kubetcl commands to scale down old ver. on primary deployment and scale up the new canary.
+
+$ kubectl scale deployment frontend --replicas=0 
+$ kubectl scale deployment frontend-v2 --replicas=5
+
+- then delete the old deployment
+$ kubectl delete deployment frontend
 
 
 
 
+Helm Introduction
+=========================================================================
+- applications we deploy into kubernetes cluster can become complex. a typical app is usually made up of collection of objects, that need to interconnect to make everything work.
+
+ex: a simple wordpress app may need object like below:
+
+- a Deployment to declare the pod that we may want to run. like mysql DB server, webserver
+- a PV to store the DB
+- a PVC
+- a Service to expose the webserver running in pods.
+- a Secret to store the admin password.
+
+and may even more if we want extra stuff like periodic backup etc..
+
+- for every objects we need a separate yaml and kubectl apply to every yaml files. this can be a tedious task. ex: we downloaded the wordpress yaml files and changes certain stuff as per our need like PV to be more that 20Gi, we change 20Gi to 100Gi as weneed more space, hence for changing more, we may have to open every yaml file and change according to our needs.
+
+- updating multiple yaml file with great cara is tedious. 
+
+- Even to delete the app, we need to remember each object that belongs and delete them all one by one.
+
+- we can also write all objects in a single yaml file but that can even become a huge file of 1000 lines and managing becomes again tedious. hence keeping them i separate yaml will better organized.
+
+- kubernets does not care about our app as a whole, it looks all objects as individual objects that needs to be created and not as a group of objects that belong to a single app called Wordpress.
+
+- Helm is package manager for kubernets, it combines each of these object and make a single package to be installed/uninstalled as a whole. instead of editing multiple yaml object files, we have a single file (values.yaml) to declare every custom settings (change PV size, change website name, admin password etc).
+
+- upgrade our app using helm upgrade workpress, helm would know what individual object needs to be changed to make this upgarde. also cal rollback. "helm rollback wordpress"
+
+- "helm uninstall wordpress" to delete all the objects in one shot, instaed of multiple separate command to remove everything.
 
 
+Install Helm
+---------------
+prerequisite:
+- a kubernetes cluster
+- kubectl utility installed and configured on your local desktop with the righ login cred setup on kube config to work with the intented target kubernetes cluster.
+- helm can be installed on windows/mac/unix system.
+
+- Identity the name of OS:
+
+$ cat /etc/*release*
+
+DISTRIB_ID=Ubuntu
+DISTRIB_RELEASE=18.04
+DISTRIB_CODENAME=bionic
+DISTRIB_DESCRIPTION="Ubuntu 18.04.5 LTS"
+NAME="Ubuntu"
+VERSION="18.04.5 LTS (Bionic Beaver)"
+ID=ubuntu
+ID_LIKE=debian
+PRETTY_NAME="Ubuntu 18.04.5 LTS"
+VERSION_ID="18.04"
+HOME_URL="https://www.ubuntu.com/"
+SUPPORT_URL="https://help.ubuntu.com/"
+BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
+PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
+VERSION_CODENAME=bionic
+UBUNTU_CODENAME=bionic
+
+
+
+
+- Install the helm package.
+
+root@controlplane:~# curl https://baltocdn.com/helm/signing.asc | apt-key add -
+
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100  1700  100  1700    0     0  12686      0 --:--:-- --:--:-- --:--:-- 12686
+OK
+
+root@controlplane:~# apt-get install apt-transport-https --yes
+
+Reading package lists... Done
+Building dependency tree       
+Reading state information... Done
+apt-transport-https is already the newest version (1.6.14).
+0 upgraded, 0 newly installed, 0 to remove and 53 not upgraded.
+
+root@controlplane:~# echo "deb https://baltocdn.com/helm/stable/debian/ all main" | tee /etc/apt/sources.list.d/helm-stable-debian.list
+
+deb https://baltocdn.com/helm/stable/debian/ all main
+
+root@controlplane:~# apt-get update
+root@controlplane:~# apt-get install helm
+
+Reading package lists... Done
+Building dependency tree       
+Reading state information... Done
+The following NEW packages will be installed:
+  helm
+0 upgraded, 1 newly installed, 0 to remove and 53 not upgraded.
+Need to get 13.8 MB of archives.
+After this operation, 45.7 MB of additional disk space will be used.
+Get:1 https://baltocdn.com/helm/stable/debian all/main amd64 helm amd64 3.7.2-1 [13.8 MB]
+Fetched 13.8 MB in 0s (54.7 MB/s)
+debconf: delaying package configuration, since apt-utils is not installed
+Selecting previously unselected package helm.
+(Reading database ... 15210 files and directories currently installed.)
+Preparing to unpack .../helm_3.7.2-1_amd64.deb ...
+Unpacking helm (3.7.2-1) ...
+Setting up helm (3.7.2-1) ...
+
+
+
+$ helm version
+version.BuildInfo{Version:"v3.7.2", GitCommit:"663a896f4a815053445eec4153677ddc24a0a361", GitTreeState:"clean", GoVersion:"go1.16.10"}
+
+
+$ helm help
+
+
+
+
+Helm Concepts
+----------------------------------------------------------
+- So we have multiple yaml files: deployment.yaml, secret.yaml, pv.yaml, pvc.yaml, service.yaml ecah woth its own component of wordpress application. No we know that each of these yaml might have some params that needs to be changes as per the need.
+	- different PV storage size declared in pv.yaml and pvc.yaml
+	- separate admin password in secret.yaml etc,
+	- diff wordpress image versions in deployment.yaml
+	
+STEP-1
+	- convert these yaml files into templates where these params becomes variables. {{ .Values.image }}, {{ .Values.storage }}, {{ .Values.password }}
+
+ex:
+
+secret.yaml
+---------------------
+apiVersion: v1
+kind: Secret
+metadata:
+  name: wordpress-admin-password
+data:
+  key: sGdhdu7829303mcnfjf
+
+	
+templates/secret.yaml
+---------------------
+apiVersion: v1
+kind: Secret
+metadata:
+  name: wordpress-admin-password
+data:
+  key: {{ .Values.passwordEncoded }}
+  
+
+- these values are fetched from values.yaml of helm, this way anyone wants to customize the installation can simply change these valuse in one single file rather than going to multiple files and keeping a track of all the changes.
+
+values.yaml
+-----------
+image: wordpress:4.8-apache
+storage: 20Gi
+passwordEncoded: sGdhdu7829303mcnfjf
+
+- hence, combination of the template yaml and values.yaml gives the final objects to be deployed in kubernetes cluster.
+
+- the templates and the values together form a helm chart.
+
+
+
+
+Helm CHART
+-------------------------------------------------------
+- a single helm chart may be used to deploy a simple app like wordpress,and it will have 
+	- all the necessary template files for different objects
+	- the values.yaml file with the variables
+	- chart.yaml having info about the chart itself. such as name of the chart, version, description, some keywords associated with the application, info about the maintainers.
+	
+- we can create our own chart for our own application.
+
+- we can download readily available charts for standard apps like Wordpress/Joomla etc from the ArtifactHUB.io 
+
+
+
+helm search hub
+------------------- 
+- ArtifactHUB.io is a community driven repo that stores helm charts. we can serach charts either on this portal or using helm search command.
+
+$ helm search hub <keyword>  // hub to indicate we wish to search in ArtifactHUB.io
+
+ex: helm search hub wordpress
+
+
+
+
+helm repo add
+------------------- 
+- there are other repo as well, such as bitnami helm repo. to search charts in repo other than ArtifactHUB.io, we need to add the repo to our local help setup.
+
+$ helm repo add bitnami https://charts.bitnami.com/bitnami
+"bitnami" has been added to your repositories
+
+
+
+
+helm repo list
+------------------- 
+- to list the added repo to your help installation:
+
+$ helm repo list
+NAME    URL                               
+bitnami https://charts.bitnami.com/bitnami
+
+
+
+
+helm search repo
+------------------- 
+- Now we can search in all the added repo using:  // use repo instead of hub to search on added repo.
+
+$ helm search repo wordpress
+
+NAME                    CHART VERSION   APP VERSION     DESCRIPTION                                       
+bitnami/wordpress       13.0.4          5.8.3           WordPress is the world's most popular blogging 
+
+
+
+- to search for the joomla package from the added repository
+
+$ helm search repo joomla
+
+NAME            CHART VERSION   APP VERSION     DESCRIPTION                                       
+bitnami/joomla  12.0.3          4.0.6           Joomla! is an award winning open source CMS pla...
+
+$ helm search repo drupal
+
+NAME            CHART VERSION   APP VERSION     DESCRIPTION                                       
+bitnami/drupal  11.0.4          9.3.3           One of the most versatile open source content m...
+
+
+helm install
+------------------- 
+- Install drupal helm chart from the bitnami repository.
+Release name should be bravo.
+Chart name should be bitnami/drupal
+
+
+- the helm install command downloads the chart in tar format, extract and install on kubernetes cluster. Each installation of a chart is called a release and each release has its name. 
+- we can install the same helm chart multiple times using multiple release names on the same kubernetes cluster. each release is completely independent of each other.
+
+syntax: helm install <release_name> <chart_name_for_drupal>
+
+$ helm install release-1 bitnami/drupal
+$ helm install release-2 bitnami/drupal
+$ helm install release-3 bitnami/drupal
+
+$ helm install bravo bitnami/drupal
+
+NAME: bravo
+LAST DEPLOYED: Sun Jan 23 10:53:40 2022
+NAMESPACE: default
+STATUS: deployed
+REVISION: 1
+TEST SUITE: None
+NOTES:
+CHART NAME: drupal
+CHART VERSION: 11.0.4
+APP VERSION: 9.3.3** Please be patient while the chart is being deployed **
 
 
  
+ 
+helm list
+------------------- 
+- command to list the installed packages:
+
+$ helm list
+
+NAME    NAMESPACE       REVISION        UPDATED                                 STATUS          CHART           APP VERSION
+bravo   default         1               2022-01-23 10:53:40.085322542 +0000 UTC deployed        drupal-11.0.4   9.3.3
 
 
 
 
+
+helm uninstall
+------------------- 
+- Uninstall the drupal helm package
+
+$ helm uninstall <installed_pck_release_name>
+
+ex: helm uninstall bravo
+release "bravo" uninstalled
+
+ 
+ 
+
+
+helm pull
+------------------- 
+- Download the bitnami apache package under the /root directory and not install.
+
+$ helm search repo bitnami/apache
+NAME            CHART VERSION   APP VERSION     DESCRIPTION                 
+bitnami/apache  9.0.1           2.4.52          Chart for Apache HTTP Server
+
+$ helm pull --untar bitnami/apache
+
+$ ls -ltr
+total 4
+drwxr-xr-x 6 root root 4096 Jan 23 10:58 apache
+
+
+$ ls -ltr apache/
+total 96
+-rw-r--r-- 1 root root 26300 Jan 23 10:58 values.yaml
+-rw-r--r-- 1 root root  1345 Jan 23 10:58 values.schema.json
+drwxr-xr-x 2 root root  4096 Jan 23 10:58 templates
+drwxr-xr-x 3 root root  4096 Jan 23 10:58 files
+drwxr-xr-x 2 root root  4096 Jan 23 10:58 ci
+drwxr-xr-x 3 root root  4096 Jan 23 10:58 charts
+-rw-r--r-- 1 root root 37440 Jan 23 10:58 README.md
+-rw-r--r-- 1 root root   619 Jan 23 10:58 Chart.yaml
+
+
+
+
+
+
+helm install from already pulled charts
+------------------------------------------ 
+- Install the apache from the downloaded helm package.
+Release name: mywebapp
+
+$ helm install mywebapp ./apache
+
+$ helm list     
+NAME            NAMESPACE       REVISION        UPDATED                                 STATUS          CHART       APP VERSION
+mywebapp        default         1               2021-10-06 16:46:40.278694926 +0000 UTC deployed        apache-8.8.32.4.50
+
+
+
+
+Shortcuts
+=========================================================================
+po 		--------->		PODs
+rs		--------->		ReplicaSet
+deploy	--------->		Deployments
+svc		--------->		Sevice
+ns		--------->		Namespace
+netpol	--------->		Network Policies
+pv		--------->		Persistent Volumes
+pvc		--------->		Persistent Volumes Claims
+sa 		--------->		Service accounts
 
 
 
