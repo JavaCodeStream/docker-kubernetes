@@ -113,8 +113,6 @@ mysql      0/1     ContainerCreating   0          22s   name=mysql
 payroll    0/1     ContainerCreating   0          21s   name=payroll
 
 
-
-
 Manifest file
 ------------------
 - every k8s manifest files have 4 sections
@@ -123,10 +121,12 @@ Manifest file
 	- kind is various type of objects available in kubernetes.
 	- metadata is like a dictionary, has kubernetes defined set of key values pairs, name, labels (label can have user defined key-value pair)
 	- spec is unique to each type of kind. it defines whats we are creating inside the object if the given kind.
-	
-	
+
+
+
+=====================================================================================================
 ReplicaSets
-===================================
+=====================================================================================================
 - Controllers are the brain behind kubernetes, these are processes that monitor kubernetes objects and responds accordingly.
 - one of such controller is 'Replication Controller'
 
@@ -137,6 +137,7 @@ ReplicaSets
 - Replication controller used to create mutiple pod to share the application load balancing.
 
 - Replication controller and Replica Set both have the same purpose but they are not same. Replication controller is older technology that is been replaced by Replica Set. Replica Set is new recommended way to setup replication.
+
 
 Replication controller:
 ------------------------
@@ -237,7 +238,7 @@ replicaset-2      2         2         2       58s
 - kubectl delete replicaset <replicaset_name>
 replicaset.apps "replicaset-1" deleted
 
-steps to edit any ecisting replicaset:
+steps to edit any existing replicaset:
 - kubectl edit replicaset new-replica-set 
 replicaset.apps/new-replica-set edited
 
@@ -283,7 +284,7 @@ new-replica-set   4         4         4       23m
 	- kubectl scale --replicas=6 -f replicaset-definition.yml
 	
 	3/
-	- kubectl scale --replicas=6 replicaset myapp-replicaset  // type (replicaset) and value (name of replicaset)
+	- kubectl scale replicaset myapp-replicaset --replicas=6  // type (replicaset) and value (name of replicaset)
 	
 	4/
 	- kubectl edit replicaset new-replica-set // vi editor and change the replicas and save.
@@ -399,10 +400,10 @@ spec:
 - kubectl [command] [TYPE] [NAME] -o <output_format>
 Here are some of the commonly used formats:
 
--o jsonOutput a JSON formatted API object.
--o namePrint only the resource name and nothing else.
--o wideOutput in the plain-text format with any additional information.
--o yamlOutput a YAML formatted API object.
+-o json Output a JSON formatted API object.
+-o name Print only the resource name and nothing else.
+-o wide Output in the plain-text format with any additional information.
+-o yaml Output a YAML formatted API object.
 
 - kubectl create namespace test-123 --dry-run -o yaml
 apiVersion: v1
@@ -474,10 +475,27 @@ metadata:
 or
 - kubectl create namespace <namespace_name>
 
- 
+
+
+======================================================================================== 
 Resource Quota
-=====================================
+========================================================================================
+https://kubernetes.io/docs/concepts/policy/resource-quotas/
+
 - to limit resources in a given namespace, we need to create a resource quota.
+
+- When several users or teams share a cluster with a fixed number of nodes, there is a concern that one team could use more than its fair share of resources.
+
+- Resource quotas are a tool for administrators to address this concern.
+
+-Different teams work in different namespaces. 
+
+- The administrator creates one ResourceQuota for each namespace.
+
+- Users create resources (pods, services, etc.) in the namespace, and the quota system tracks usage to ensure it does not exceed hard resource limits defined in a ResourceQuota.
+
+- If creating or updating a resource violates a quota constraint, the request will fail with HTTP status code 403 FORBIDDEN with a message explaining the constraint that would have been violated.
+
 
 resource-quota-definition.yaml
 ------------------------------
@@ -488,12 +506,29 @@ metadata:
 	namespace: dev
 spec:
 	hard: 
-		pods: "10"
 		requests.cpu: "4"
 		requests.memory: 5Gi
 		limits.cpu: "10"
 		limits.memory: 10Gi
 		
+
+
+object-counts.yaml
+--------------------
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: object-counts
+spec:
+  hard:
+    configmaps: "10"
+    persistentvolumeclaims: "4"
+    pods: "4"
+    replicationcontrollers: "20"
+    secrets: "10"
+    services: "10"
+    services.loadbalancers: "2"
+	
 
 - kubectl create -f resource-quota-definition.yaml
 	
@@ -520,20 +555,20 @@ marketing       blue                                     1/1     Running        
  
 - kubectl run nginx --image=nginx --dry-run=client -o yaml  // Generate POD Manifest YAML file (-o yaml). Don't create it(--dry-run)
 
-- kubectl create deployment --image=nginx nginx --dry-run -o yaml > nginx-deployment.yaml  // Generate Deployment YAML file (-o yaml). Don't create it(--dry-run)
+- kubectl create deployment nginx --image=nginx --dry-run=client -o yaml > nginx-deployment.yaml  // Generate Deployment YAML file (-o yaml). Don't create it(--dry-run)
 
 - kubectl create deployment nginx --image=nginx --replicas=4  // Generate Deployment with 4 Replicas
 
 - kubectl scale deployment nginx --replicas=5  //  scale a deployment using the kubectl scale command.
  
-Deploy a redis pod using the redis:alpine image with the labels set to tier=db 
+Deploy a redis pod using the redis:alpine image with the labels set to tier=db, multiple labels? 
 - kubectl run redis --image redis:alpine --labels tier=db
 
 Create a service redis-service to expose the redis application within the cluster on port 6379
 - kubectl expose pod redis --name redis-service --port 6379 --target-port 6379
 - kubectl describe svc redis-service 
 Name:              redis-service
-Namespace:         default
+Namespace:         defaut
 Labels:            tier=db
 Annotations:       <none>
 Selector:          tier=db
@@ -553,25 +588,27 @@ Create a deployment named webapp using the image kodekloud/webapp-color with 3 r
 - kubectl create deployment webapp --image=kodekloud/webapp-color
 deployment.apps/webapp created
 
-- kubectl get deployments webapp
+- kubectl get deployment webapp
 NAME     READY   UP-TO-DATE   AVAILABLE   AGE
 webapp   1/1     1            1           62s
 
-- kubectl scale deployment --replicas=3 webapp
+- kubectl scale deployment webapp --replicas=3 
 deployment.apps/webapp scaled
 
-- kubectl get deployments webapp
+- kubectl get deployment webapp
 NAME     READY   UP-TO-DATE   AVAILABLE   AGE
 webapp   3/3     3            3           108s
 
 
-Create a new pod called custom-nginx using the nginx image and expose it on container port 8080.
+Create a new pod called custom-nginx using the nginx image and expose it on container port 8080. if we dont specify --port 8080, which port it runs?
 - kubectl run custom-nginx --image nginx --port 8080
 pod/custom-nginx created
 
 Create a new deployment called redis-deploy in the dev-ns namespace with the redis image. It should have 2 replicas.
 - kubectl --namespace dev-ns create deployment redis-deploy --image redis --replicas 2
 deployment.apps/redis-deploy created
+
+
 - kubectl -n dev-ns get deployments.apps redis-deploy 
 NAME           READY   UP-TO-DATE   AVAILABLE   AGE
 redis-deploy   2/2     2            2           16s
@@ -579,7 +616,9 @@ redis-deploy   2/2     2            2           16s
 
 Create a pod called httpd using the image httpd:alpine in the default namespace. Next, create a service of type ClusterIP by the same name (httpd). The target port for the service should be 80.
 --expose: creates a service for the pod.
+
 - kubectl run httpd --image httpd:alpine --port 80 --expose --dry-run=client -o yaml
+
 apiVersion: v1
 kind: Service
 metadata:
@@ -616,8 +655,10 @@ status: {}
 
 
 
+
+===========================================================================================
 Image and Docker vs Kubernetes
-=================================
+===========================================================================================
 - lets say we have an image: ubuntu-sleeper
 
 FROM ubuntu
@@ -692,10 +733,12 @@ spec:
   restartPolicy: Always
 
 
+
+======================================================================================
 Editing PODs and Deployments
-======================================
+======================================================================================
 Edit a POD
------------
+------------
 Remember, you CANNOT edit specifications of an existing POD other than the below.
 
 spec.containers[*].image
@@ -755,13 +798,13 @@ kind: Pod
 metadata:
 	name: simple-webapp-color
 spec:
-	containers:
-	-	name: simple-webapp-color
-		image: simple-webapp-color
-ports:
-	-	containerPort: 8080
-env:
-	- name: APP_COLOR
+  containers:
+  - name: simple-webapp-color
+    image: simple-webapp-color
+    ports:
+    - containerPort: 8080
+    env:
+    - name: APP_COLOR
       value: pink
 	  
 
@@ -784,8 +827,10 @@ env:
 		
 
 
+
+==============================================================
 ConfigMap
-===================================
+==============================================================
 ConfigMap
 -----------
 APP_COLOR: blue
@@ -814,21 +859,76 @@ configmap/nginx-configmap created
 Create configMap using command from file:
 ------------------------------------------
 - kubectl create configmap <configmap_name> --from-file=<file_path>
+- when you create a ConfigMap using --from-file, the filename becomes a key stored in the data section of the ConfigMap. The file contents become the key's value.
 
 ex:
-- kubectl create configmap app-config --from-file=/opt/app_config.properties
+- kubectl create cm app-config --from-file=app.properties 
+configmap/app-config created
+
+
+$ kubectl get cm
+
+NAME               DATA   AGE
+kube-root-ca.crt   1      5m58s
+app-config         1      8s
+
+
+
+$ kubectl describe cm app-config 
+
+Name:         app-config
+Namespace:    default
+Labels:       <none>
+Annotations:  <none>
+
+Data
+====
+app.properties:
+----
+APP_COLOR=blue
+APP_MODE=prod
+
+
+BinaryData
+====
+
+Events:  <none>
+
+
+
+
+$ kubectl create cm app-cm --from-literal=APP=front_end --dry-run=client -o yaml
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: app-cm
+data:
+  APP: front_end
+
+
+$ kubectl create cm app-cm --from-file=app.properties --dry-run=client -o yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: app-cm
+data:
+  app.properties: "APP_COLOR=blue\r\nAPP_MODE=prod"
+
 
 
 config-map.yaml (data instead of spec)
 ----------------
 apiVersion: v1
-kind: Config
+kind: ConfigMap
 metadata: 
-	name: app-config
+  name: app-config
 data:
-	APP_COLOR: blue
-	APP_MODE: prod
-	
+  APP_COLOR: blue
+  APP_MODE: prod
+
 - kubectl create -f config-map.yaml
 
 - use these configMap names while associating to pods
@@ -878,9 +978,9 @@ spec:
 	  image: simple-webapp-color
 	  ports:
 	  - containerPort: 8080
-	  - envFrom:
-		- configMapRef:
-			name: webapp-config-map // inject a specific configMap as env variables into the pod created earlier. 
+	  envFrom:
+	  - configMapRef:
+		  name: webapp-config-map // inject a specific configMap as env variables into the pod created earlier. 
 			
 - we can inject specific env values from the earlier created configMap object:
 env:
@@ -899,9 +999,108 @@ volumes:
 		
 
 
+- Populate a Volume with data stored in a ConfigMap
+apiVersion: v1
+kind: Pod
+metadata:
+  name: dapi-test-pod
+spec:
+  containers:
+    - name: test-container
+      image: k8s.gcr.io/busybox
+      command: [ "/bin/sh", "-c", "ls /etc/config/" ]
+      volumeMounts:
+      - name: config-volume
+        mountPath: /etc/config
+  volumes:
+    - name: config-volume
+      configMap:
+        # Provide the name of the ConfigMap containing the files you want
+        # to add to the container
+        name: special-config
+  restartPolicy: Never
+
+
+
+
+
+Exercise:
+--------------
+# Create namespace
+kubectl create namespace configmaps
+# Set namespace as the default for the current context
+kubectl config set-context $(kubectl config current-context) --namespace=configmaps
+
+1. Create a ConfigMap from two literal key-value pairs:
+
+kubectl create configmap app-config --from-literal=DB_NAME=testdb \
+  --from-literal=COLLECTION_NAME=messages
+  
+  
+2. Display the ConfigMap:
+
+$ kubectl get configmaps app-config -o yaml
+apiVersion: v1
+data:
+  COLLECTION_NAME: messages
+  DB_NAME: testdb
+kind: ConfigMap
+
+3. Create a Pod that mounts the ConfigMap using a volume:
+
+cat << 'EOF' > pod-configmap.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: db 
+spec:
+  containers:
+  - image: mongo:4.0.6
+    name: mongodb
+    # Mount as volume 
+    volumeMounts:
+    - name: config
+      mountPath: /config
+    ports:
+    - containerPort: 27017
+      protocol: TCP
+  volumes:
+  - name: config
+    # Declare the configMap to use for the volume
+    configMap:
+      name: app-config
+EOF
+kubectl create -f pod-configmap.yaml
+
+
+4. List the /config directory, where the ConfigMap volume is mounted, in the container:
+- The && echo is added simply to put the shell prompt onto a new line.
+
+$ kubectl exec db -it -- ls /config
+COLLECTION_NAME  DB_NAME
+
+$ kubectl exec db -it -- cat /config/DB_NAME && echo
+testdb
+
+$ kubectl exec db -it -- cat /config/COLLECTION_NAME && echo
+messages
+
+
+
+
+
+
+=============================================================================
 
 Secrets
-=====================================
+
+=============================================================================
+- Kubernetes provides Secrets as a way of storing sensitive data, such as passwords or API keys. Secrets reduce the risk of accidental exposure compared to if they were stored in an image or put in a Pod specification. Kubernetes supports storing Secrets as generic key-value pairs and also provides specialized support for TLS certificate secrets and Docker registry secrets used for pulling images from registries that require authentication. This lab step focuses on the generic variety of Secrets.
+
+- Secrets are very similar to ConfigMaps with the main difference being their intent, i.e. Secrets store sensitive information, and ConfigMaps should store configuration data. Secrets are not encrypted at rest by default and are instead only base-64 encoded. However, Kubernetes can separately control access to ConfigMaps and Secrets. So by following the pattern of storing sensitive data in Secrets, users of the cluster can be denied access to Secrets but granted access to ConfigMaps using Kubernetes access control mechanisms.
+
+
+
 mysql.connector.connect(host="mysql", database="mysql", user="root", password="passwd")
 
 - the code above is hard coding all the db connection details. we can move them to configMap but configMap store the key/value in plain text which is not good for storing passwords.
@@ -930,10 +1129,97 @@ ex:
 
 Create secret using command from file:
 ------------------------------------------
-- kubectl create secret <secret_name> --from-file=<file_path>
+- kubectl create secret generic <secret_name> --from-file=<file_path>
 
 ex:
-- kubectl create secret app-secret --from-file=/opt/app_secret.properties
+- kubectl create secret generic app-secret --from-file=/opt/app_secret.properties
+
+- using from-file, app_secret.properties will be the name of the key and value is file content.
+
+- You can optionally set the key name using --from-file=[key=]source
+
+$ kubectl create secret generic db-user-pass \
+  --from-file=username=./username.txt \
+  --from-file=password=./password.txt
+
+- do not need to escape special characters ($, \, *, =, and !) in password strings that you include in a file. BUT require escaping while using --from-literal=<key>=<value> and surround it with single quotes (') i.e. \ before * char
+
+$ kubectl create secret generic db-user-pass \
+  --from-literal=username=devuser \
+  --from-literal=password='S!B\*d$zDsb='
+
+
+- Also, when using imperative kubectl way, the strings gets automatically encoded with base64, the value does not get displayed during kubectl describe but kubectl get secrets <secret_name> -o yaml shows the secret in base64 encoded. while used inside a pod as env and if we print the env value, it will be dsplayed in plain text.
+
+$ kubectl create secret generic test-sec --from-literal=username=abc --from-literal=password=xyz
+secret/test-sec created
+
+$ kubectl describe secrets test-sec 
+Name:         test-sec
+Namespace:    default
+Labels:       <none>
+Annotations:  <none>
+
+Type:  Opaque
+
+Data
+====
+password:  3 bytes
+username:  3 bytes
+
+$ kubectl get secrets test-sec -o yaml
+apiVersion: v1
+data:
+  password: eHl6
+  username: YWJj
+kind: Secret
+metadata:
+
+
+pod.yaml
+--------
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: nginx-test
+  name: nginx-test
+spec:
+  containers:
+  - image: nginx:alpine
+    name: nginx-test
+    ports:
+    - containerPort: 8080
+    env:
+	  - name: SECRET_USERNAME
+        valueFrom:
+          secretKeyRef:
+            name: test-sec
+            key: username
+      - name: SECRET_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: test-sec
+            key: password
+  restartPolicy: Always
+
+
+$ kubectl create -f pod.yaml 
+pod/nginx-test created
+
+$ kubectl exec -it nginx-test -- /bin/sh
+
+/ # echo $SECRET_USERNAME
+abc
+/ # echo $SECRET_PASSWORD
+xyz
+
+
+
+$ kubectl exec -it nginx-test -- /bin/sh
+/ # /bin/sh -c env
+
 
 
 secret.yaml (data instead of spec)
@@ -984,7 +1270,7 @@ $ echo -n "bC1hsjk=" | base64 --decode
 mysql
 
 
-- Create TLS secret named webhook-server-tls
+- Create TLS secret named webhook-server-tls for ssl certificates.
 
 $ kubectl -n webhook-demo create secret tls webhook-server-tls \
 	--cert "/root/keys/webhook-server-tls.crt" \
@@ -1047,7 +1333,7 @@ DB_Host		DB_password		DB_user
 - cat /opt/app-secret-volumes/DB_password   // content of these files has the secret value.
 passwd
 
-IMP ***** note od Secret
+IMP ***** note of Secret
 --------------------------
 - Remember that secrets encode data in base64 format. Anyone with the base64 encoded secret can easily decode it. As such the secrets can be considered as not very safe.
 - Secrets are not encrypted, so it is not safer in that sense. However, some best practices around using secrets make it safer. As in best practices like:
@@ -1061,12 +1347,88 @@ IMP ***** note od Secret
 	
 	
 
+CoudAcademy Exercise:
+-----------------------
+$ kubectl create ns secrets
+$ kubectl config set-context --current --namespace=secrets
+
+
+$ kubectl create secret generic app-secret --from-literal=password=123457
+
+$ kubectl get secrets app-secret 
+NAME         TYPE     DATA   AGE
+app-secret   Opaque   1      16s
+
+
+$ kubectl get secrets app-secret -o yaml
+apiVersion: v1
+data:
+  password: MTIzNDU3
+kind: Secret
+..
+..
+
+- The data field holds all of the key-value pairs. In this case, there is only one. The key password appears as expected, but the value (MTIzNDU3) is far from "123457". That is because secret values are base-64 encoded. 
+
+
+- *** Note: When you use kubectl create secret, the value is automatically encoded. If you use kubectl create -f, and specify a resource file, you need to encode the value yourself when setting the data: mapping. See the next instruction for how to achieve this. Alternatively, you can set a stringData: mapping instead which will perform the encoding for you. 
+
+
+- Confirm the secret value is base-64 encoded by decoding it:
+
+
+- Create a Pod that uses the Secret through an environment variable:
+- When using a secret through an environment variable, you must include valueFrom.secretKeyRef to specify the source of the environment variable.
+
+cat << EOF > pod-secret.yaml 
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-secret
+spec:
+  containers:
+  - image: busybox:1.30.1
+    name: busybox
+    args:
+    - sleep
+    - "3600"
+    env:
+    - name: PASSWORD      # Name of environment variable
+      valueFrom:
+        secretKeyRef:
+          name: app-secret  # Name of secret
+          key: password     # Name of secret key
+EOF
+
+kubectl create -f pod-secret.yaml
+
+
+
+- Print the value of the environment variable in the Pod's container:
+- *** Notice that the value is base-64 decoded automatically, so there is no need to use base64 --decode inside the container.
+
+$ kubectl exec -it pod-secret busybox -- /bin/sh -c 'echo $PASSWORD' 
+
+123457
+
+
+
+
+
+
+
+
+
+
+=============================================================================
 
 Seurity Context
-================================
+
+=============================================================================
+
 Seurity Context in Docker
 --------------------------
-- We have learned that unlike virtual machines containers are not completely isolated  from their host. Containers and the hosts share the same kernel. Containers are isolated using namespaces in Linux. The host has a namespace and the containers have their own namespace. All the processes run by the containers are in fact run on the host itself, but in their own namespaces.
+- We have learned that unlike virtual machines, containers are not completely isolated  from their host. Containers and the hosts share the same kernel. Containers are isolated using namespaces in Linux. The host has a namespace and the containers have their own namespace. All the processes run by the containers are in fact run on the host itself, but in their own namespaces.
 
 $ docker run ubuntu sleep 3600
 
@@ -1167,7 +1529,7 @@ metadata:
 	name: web-pod
 spec:
 	securityContext:
-		runAsUser: 1000
+	  runAsUser: 1000
 	containers:
 	- name: ubuntu
 	  image: ubuntu
@@ -1181,11 +1543,156 @@ spec:
 
 
 
+Exercise:
+-----------
+
+1. Create the following Pod manifest file:
+
+cat << EOF > pod-no-security-context.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: security-context-test-1
+spec:
+  containers:
+  - image: busybox:1.30.1
+    name: busybox
+    args:
+    - sleep
+    - "3600"
+EOF
+
+
+$ kubectl create -f pod-no-security-context.yaml
+
+
+- There are only a minimal number of devices available in the container and none that can do any harm. 
+
+$ kubectl exec security-context-test-1 -it -- ls /dev
+
+core             null             shm              termination-log
+fd               ptmx             stderr           tty
+full             pts              stdin            urandom
+mqueue           random           stdout           zero
+
+
+
+2. Delete the previous Pod and create a similar Pod that has a privileged container:
+
+$ kubectl delete -f pod-no-security-context.yaml
+
+$ cat > pod-privileged.yaml <<EOF
+apiVersion: v1
+kind: Pod
+metadata:
+  name: security-context-test-2
+spec:
+  containers:
+  - image: busybox:1.30.1
+    name: busybox
+    args:
+    - sleep
+    - "3600"
+    securityContext:
+      privileged: true
+EOF
+
+$ kubectl create -f pod-privileged.yaml
+
+
+- All of the host devices are available including the host file system disk nvme0n1p1. This could be a major security breach and shows the importance of carefully considering if you should ever use a privileged container.
+
+$ kubectl exec security-context-test-2 -it -- ls /dev
+
+autofs           pts              tty32            tty9
+btrfs-control    random           tty33            ttyS0
+core             rfkill           tty34            ttyS1
+cpu_dma_latency  rtc0             tty35            ttyS2
+cuse             shm              tty36            ttyS3
+ecryptfs         snapshot         tty37            ttyprintk
+fd               stderr           tty38            udmabuf
+full             stdin            tty39            uinput
+fuse             stdout           tty4             urandom
+hpet             termination-log  tty40            vcs
+..
+..
+..
+..
+
+
+
+3. Create another pod that includes a Pod security context as well as a container security context:
+
+- The Pod security context enforces that container processes do not run as root (runAsNonRoot) and sets the user ID of the container process to 1000. The container securityContext sets the container process' user ID to 2000 and sets the root file system to read-only.
+
+cat << EOF > pod-runas.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: security-context-test-3
+spec:
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+  containers:
+  - image: busybox:1.30.1
+    name: busybox
+    args:
+    - sleep
+    - "3600"
+    securityContext:
+      runAsUser: 2000
+      readOnlyRootFilesystem: true
+EOF
+
+$ kubectl create -f pod-runas.yaml
+
+
+
+- Open a shell in the container:
+
+$ kubectl exec security-context-test-3 -it -- /bin/sh
+/ $ 
+
+
+- *** Notice that the shell prompt is $ and not # indicating that you are not the root user.
+
+
+- List the running processes in the container:
+$ ps
+PID   USER     TIME  COMMAND
+    1 2000      0:00 sleep 3600
+    7 2000      0:00 /bin/sh
+   14 2000      0:00 ps
+
+
+- The USER ID is 2000 illustrating that it is not root and that the container security context overrides the setting in the Pod security context when both security contexts include the same field. Whenever possible you should not run as root.
+
+
+
+- Attempt to create a file in the /tmp directory:
+
+$ touch /tmp/test-file
+
+touch: /tmp/test-file: Read-only file system
+
+
+
+- The attempt fails due to the Read-only file system. When possible, it is best to use read-only root file systems to harden your container environments. A best practice is to use volumes to mount any files that require modification, allowing the root file system to be read-only.
+
+
+
+
+
 ====================================================================
 
 Service Accounts
 
 ====================================================================
+
+- Kubernetes uses ServiceAccounts as a mechanism for providing Pods with an identity in the cluster. Pods can authenticate using ServiceAccounts and gain access to APIs that the ServiceAccount has been granted. Your cluster administrator can create specific roles that grant access to APIs and bind the roles to ServiceAccounts. This is referred to as role-based access control (RBAC). Pods can then declare a ServiceAccount in their specification to gain the access associated with the ServiceAccount's role. As an example, you could use a ServiceAccount to grant a Pod access to the GET Pod API to allow the Pod to get the details of other Pods. This lab step focuses on ServiceAccounts and not the roles that are used to grant access to Kubernetes APIs that would be configured by a Kubernetes administrator.
+
 
 - The concept of service accounts is linked to other security related concepts in kubernetes such as Authentication, Authorization, Role based access controls etc. 
 
@@ -1376,8 +1883,105 @@ spec:
 	  
 
 
+CoundAcademy Exercise:
+-----------------------
+# Create namespace
+kubectl create namespace serviceaccounts
+# Set namespace as the default for the current context
+kubectl config set-context $(kubectl config current-context) --namespace=serviceaccounts
+
+
+
+- Each Namespace has a default ServiceAccount. The default ServiceAccount grants minimal access to APIs and cannot be used to get any cluster state information. Therefore, you should use custom ServiceAccounts when your application requires access to cluster state.
+
+$ kubectl get serviceaccount
+NAME      SECRETS   AGE
+default   1         29s
+
+
+
+kubectl run default-pod --image=mongo:4.0.6
+kubectl get pod default-pod -o yaml | more
+
+serviceAccount: default
+serviceAccountName: default
+
+
+- It is a best practice to create a ServiceAccount for each of your applications to use the least amount of access necessary (principle of least privilege) to improve security. The created ServiceAccount will not have any specific role bound to it so there are no additional permissions associated with it. 
+- In practice, your Kubernetes administrator would create a role and bind it to the ServiceAccount. 
+
+$ kubectl create serviceaccount app-sa
+
+
+
+- Create a new Pod that uses the custom ServiceAccount:
+
+$ kubectl run default-pod --image=mongo:4.0.6 --serviceaccount=app-sa --dry-run=client -o yaml
+
+Or
+
+cat << 'EOF' > pod-custom-sa.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: custom-sa-pod 
+spec:
+  containers:
+  - image: mongo:4.0.6
+    name: mongodb
+  serviceAccount: app-sa
+EOF
+kubectl create -f pod-custom-sa.yaml
+
+
+
+$ kubectl get pod custom-sa-pod -o yaml | more
+
+..
+..
+serviceAccount: app-sa
+serviceAccountName: app-sa
+..
+..
+
+
+- Every ServiceAccount has a corresponding token secret (see them with kubectl get secrets) that can be used to authenticate requests from inside the container. The ServiceAccount's token secret is automatically mounted as a volume. That is what you see in the volumeMounts configuration.
+
+
+volumeMounts:
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: app-sa-token-q5n4w
+      readOnly: true
+
+volumes:
+  - name: app-sa-token-q5n4w
+    secret:
+      defaultMode: 420
+      secretName: app-sa-token-q5n4w
+	  
+
+
+
+
+
+
+
+
+
+
+
+
+==============================================================
+
 Resources
-=================================================
+
+==============================================================
+
+https://kubernetes.io/docs/tasks/administer-cluster/manage-resources/cpu-constraint-namespace/
+
+
+- It is a best practice to include some information about the compute resource requirements for a Pod in its specification. The compute resources that Kubernetes includes built-in support for are CPU, measured in cores, and memory, measured in bytes. Kubernetes allows you to include a requested amount (minimum) and a limit (maximum) for each compute resource. Although the compute resource requests and limits are optional, the Kubernetes scheduler can make better decisions about which node to schedule a Pod on if it knows the Pod's resource requirement. The scheduler will only schedule a Pod on a node if the node has enough resources available to satisfy the Pod's total request, which is the sum of the Pod's containers' requests. Limits also reduce resource contention on a node and can make performance more predictable.
+
 - Each node has a set of CPU, Memory and Disk resources available. Every POD consumes a set of resources
 - Whenever a POD is placed on a Node, it consumes resources available to that node.
 
@@ -1387,6 +1991,8 @@ Resources
 
 - By default, kubernetes assumes that a POD or a container within a POD requires .5 CPU & 256 Mebibyte of memory. The minimum amount of CPU or Memory requested by the container. 
 - For the POD to pick up those defaults you must have first set those as default values for request and limit by creating a LimitRange in that namespace.
+
+
 
 mem-limit-range-definition.yaml
 -------------------------------
@@ -1450,7 +2056,7 @@ labels:
 	containers:
 		- name: simple-webapp-color
 		  image: simple-webapp-color
-		ports:
+		  ports:
 			- containerPort: 8080
 		resources:
 			requests:
@@ -1465,16 +2071,227 @@ labels:
 - So what happens when a pod tries to exceed resources beyond its specified limit. In case of the CPU, kubernetes throttles the CPU so that it does not go beyond the specified limit. A container cannot use more CPU resources than its limit. However, this is not the case with memory. A container CAN use more memory resources that its limit. So if a pod tries to consume more memory than its limit constantly, the POD will be terminated.
 
 
+https://kubernetes.io/docs/tasks/administer-cluster/manage-resources/cpu-constraint-namespace/
 
+$ kubectl create namespace constraints-cpu-example
+
+
+cpu-constraints.yaml
+--------------------
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: cpu-min-max-demo-lr
+spec:
+  limits:
+  - max:
+      cpu: "800m"
+    min:
+      cpu: "200m"
+    type: Container
+
+$ kubectl apply -f cpu-constraints.yaml --namespace=constraints-cpu-example
+
+
+$ kubectl get limitrange cpu-min-max-demo-lr -o yaml -n constraints-cpu-example
+
+limits:
+- default:
+    cpu: 800m
+  defaultRequest:
+    cpu: 800m
+  max:
+    cpu: 800m
+  min:
+    cpu: 200m
+  type: Container
+  
+  
+Now whenever you create a Pod in the constraints-cpu-example namespace (or some other client of the Kubernetes API creates an equivalent Pod), Kubernetes performs these steps:
+- If any container in that Pod does not specify its own CPU request and limit, the control plane (LimitRanger admission controller) assigns the default CPU request and limit to that container.
+- Verify that every container in that Pod specifies a CPU request that is greater than or equal to 200 millicpu.
+- Verify that every container in that Pod specifies a CPU limit that is less than or equal to 800 millicpu.
+
+
+
+admin-resource-cpu-constraints-pod-yaml
+----------------------------------------
+apiVersion: v1
+kind: Pod
+metadata:
+  name: constraints-cpu-demo
+spec:
+  containers:
+  - name: constraints-cpu-demo-ctr
+    image: nginx
+    resources:
+      limits:
+        cpu: "800m"
+      requests:
+        cpu: "500m"
+
+
+
+Exercise:
+--------------
+1. Create a Pod manifest for a Pod that will consume a lot of CPU resources:
+
+load.yaml
+---------
+apiVersion: v1
+kind: Pod
+metadata:
+  name: load
+spec:
+  containers:
+  - name: cpu-load
+    image: cloudacademydevops/stress
+    args:
+    - -cpus
+    - "2"
+
+
+- The args instruct stress to attempt to consume two CPU cores, which is how many cores each node in the cluster has.
+
+$ kubectl apply -f load.yaml
+
+
+- The top command is similar to the native Linux top command for measuring CPU and memory usage of processes. You can monitor at the node or pod level.
+
+- List the resource consumption of pods:
+- The load pod is using nearly two full cores (1930milli-cores). Having such an unrestricted pod in your cluster could wreak havoc.
+
+$ kubectl top pods
+
+NAME   CPU(cores)   MEMORY(bytes)   
+load   1952m        1Mi
+
+
+$ kubectl get po -o wide
+
+NAME   READY   STATUS    RESTARTS   AGE     IP               NODE                                      NOMINATED NODE   READINESS GATES
+load   1/1     Running   0          2m25s   192.168.23.129   ip-10-0-0-11.us-west-2.compute.internal   <none>           <none>
+
+
+$ kubectl top node
+
+NAME                                       CPU(cores)   CPU%   MEMORY(bytes)   MEMORY%   
+ip-10-0-0-10.us-west-2.compute.internal    61m          3%     527Mi           13%       
+ip-10-0-0-100.us-west-2.compute.internal   180m         9%     1080Mi          28%       
+ip-10-0-0-11.us-west-2.compute.internal    1999m        99%    619Mi           16%
+
+
+2. Create a similar Pod specification except with CPU and memory resource limits and requests:
+
+load-limited.yaml
+-----------------
+apiVersion: v1
+kind: Pod
+metadata:
+  name: load-limited
+spec:
+  containers:
+  - name: cpu-load-limited
+    image: cloudacademydevops/stress
+    args:
+    - -cpus
+    - "2"
+    resources:
+      limits:
+        cpu: "0.5" # half a core
+        memory: "20Mi" # 20 mebibytes 
+      requests:
+        cpu: "0.35" # 35% of a core
+        memory: "10Mi" # 10 mebibytes
+
+
+- The Pod will only be scheduled on a Node with 0.35 CPU cores and 10MiB of memory available. 
+
+- **** It's important to note that the scheduler doesn't consider the actual resource utilization of the node. Rather, it bases its decision upon the sum of container resource requests on the node. For example, if a container requests all the CPU of a node but is actually 0% CPU, the scheduler would treat the node as not having any CPU available. In the context of this lab, the load Pod is consuming 2 CPUs on a Node but because it didn't make any request for the CPU, its usage doesn't impact following scheduling requests.
+
+
+$ kubectl apply -f load-limited.yaml
+
+
+- In this case the load-limited Pod is scheduled on the Node (NODE) that isn't running the load Pod. However, this is only by chance since the load Pod did not make any request for the CPU it is using.
+
+$ kubectl get pod -o wide
+
+NAME           READY   STATUS    RESTARTS   AGE   IP               NODE                                      NOMINATED NODE   READINESS GATES
+load           1/1     Running   0          16m   192.168.23.129   ip-10-0-0-11.us-west-2.compute.internal   <none>           <none>
+load-limited   1/1     Running   0          24s   192.168.23.130   ip-10-0-0-11.us-west-2.compute.internal   <none>           <none>
+
+
+
+- In this case, the load-limited Pod is using near half a CPU as specified by its limit. However, the load Pod is now using roughly half a CPU less because it had to give up CPU resources for the load-limited Pod.
+
+$ kubectl top pods
+
+NAME           CPU(cores)   MEMORY(bytes)   
+load           1319m        1Mi             
+load-limited   503m         1Mi
+
+
+
+3. Update the load Pod manifest to include a request for 1.7 CPU:
+
+- The value of 1.7 is chosen because there may not be a Node with a full 2 CPUs available considering some system Pods also make requests in addition to the Pods you create.
+
+cat << 'EOF' > load.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: load
+spec:
+  containers:
+  - name: cpu-load
+    image: cloudacademydevops/stress
+    args:
+    - -cpus
+    - "2"
+    resources:
+      requests:
+        cpu: "1.7"
+EOF
+
+
+- Apply the new Pod manifest:
+- The apply command cannot be used without the --force option case because updates are not allowed to update container resources. The --force option first deletes the Pod and then creates a new one.
+
+$ kubectl apply --force -f load.yaml
+
+
+
+- Confirm the Pods are running on separate Nodes:
+- It is now guaranteed that the Pods won't be on the same Node because their combined CPU request is 2.1 and the Nodes only have 2 CPUs.
+
+$ kubectl get pods -o wide
+
+NAME           READY   STATUS    RESTARTS   AGE     IP                NODE                                      NOMINATED NODE   READINESS GATES
+load           1/1     Running   0          24s     192.168.203.129   ip-10-0-0-10.us-west-2.compute.internal   <none>           <none>
+load-limited   1/1     Running   0          3m54s   192.168.23.130    ip-10-0-0-11.us-west-2.compute.internal   <none>           <none>
+
+
+
+
+
+
+
+
+
+
+===================================================================================
 	
 Taints and Tolerations
-==========================================================
+
+===================================================================================
+
 - This is about the Pod to Node relationships and how to restrict what pod to get scheduled on what nodes. this is used to restrict on what pods can be scheduled on specific nodes.
 
 - when the pods are created, Kubernetes tries to schedule them on the available nodes. by default, there are not restrictions or limitations and as such the scheduler places the pods across all of the nodes to balance them out equaly.
 
 - In case we have a dedicated resources allocated to some specific nodes for some high capacity usage. we would like only those pods to be scheduled on these nodes,
-	- first add a taint to those nodes for restrict all nodes getting scheduled on them. ex: taint=blue
+	- first add a taint to those nodes for restrict all pod getting scheduled on them. ex: taint=blue
 	- by default, pods wont have any toleration.
 	- add the same toleration to specific pods to be scheduled on those specific nodes.
 	- when Scheduler trying to schedule other pods to these taint nodes, the pods get rejected due to the taint. hence scheduler schedules them on other nodes.
@@ -1495,8 +2312,14 @@ $ kubectl taint nodes node1 app=myapp:NoSchedule
 $ kubectl taint nodes node01 spray=mortein:NoSchedule
 node/node01 tainted
 
+- places a taint on node node1. The taint has key key1, value value1, and taint effect NoSchedule. This means that no pod will be able to schedule onto node1 unless it has a matching toleration.
+
+
 - remove taint from a node
 $ kubectl taint nodes <node-name> <taint-name>-   // - symbol at the end
+$ kubectl taint nodes node1 key1=value1:NoSchedule-
+
+
 
 ex:
 $ kubectl describe node controlplane | grep -i taint
@@ -1559,10 +2382,10 @@ spec:
 - to see these taint on master node, run the below:
 
 $ kubectl describe node kubemaster | grep Taint
-Taints: node-role.kubernetes.io/master:NoSchedule
+Taints: 	node-role.kubernetes.io/master:NoSchedule
 
 $ kubectl describe node controlplane | grep Taints
-Taints:             node-role.kubernetes.io/master:NoSchedule
+Taints:     node-role.kubernetes.io/master:NoSchedule
 
 $ kubectl describe node node01 | grep Taint
 Taints:             <none>
@@ -1577,9 +2400,52 @@ tolerations       <[]Object>
 	 
 
 
+- add more than one taint to nodes:
+$ kubectl taint nodes node1 key1=value1:NoSchedule
+$ kubectl taint nodes node1 key2=value2:NoSchedule
+
+
+- add more than one tolerations to pods
+
+tolerations:
+- key: "key1"
+  operator: "Equal"
+  value: "value1"
+  effect: "NoSchedule"
+- key: "key1"
+  operator: "Equal"
+  value: "value1"
+  effect: "NoExecute"
+  
+  
+
+
+- The tolerationSeconds parameter specifies how long a pod can remain bound to a node before being evicted. If a taint with the NoExecute effect is added to a node, any pods that do not tolerate the taint are evicted immediately (pods that do tolerate the taint are not evicted). However, if a pod that to be evicted has the tolerationSeconds parameter, the pod is not evicted until that time period expires.
+
+tolerations:
+- key: "key1" 
+  operator: "Equal" 
+  value: "value1" 
+  effect: "NoExecute" 
+  tolerationSeconds: 3600 
+
+
+- Sample pod configuration file with Exists operator
+
+tolerations:
+- key: "key1"
+  operator: "Exists"
+  effect: "NoExecute"
+  tolerationSeconds: 3600
+  
+  
+
+
+=============================================================================
 
 Node Selectors
-====================================
+
+=============================================================================
 - by default any Pods can get scheduled to any nodes. so, even if there are few nodes with higher harware resources allocated, a POD (ex: data processor app) if it requires high resources, ends up being scheduled to any node, whcih is not desired.
 
 - 2 ways to achive this:
@@ -1601,32 +2467,88 @@ Node Selectors
 		nodeSelector:
 			size: Large
 	
-	$ kubectl apply -f pod-definition.yaml
-	
 	- size=Large are labels assigned to the specific nodes, the scheduler uses these labels to match and identify the right node to place the right pods on.
 	- we must have label the nodes prior to add them in nodeSelector on pod.
 	
 - on Nodes - add labels
-		$ kubectl label nodes <node-name> <label-key>=<label-value>
-		ex:
-		$ kubectl label node01 size=Large
-	
-	$ kubectl apply -f pod-definition.yaml
-	
+$ kubectl label nodes <node-name> <label-key>=<label-value>
+ex:
+$ kubectl label node01 size=Large
+
+
+- List the nodes in your cluster, along with their labels:
+$ kubectl get nodes --show-labels
+
+NAME      STATUS    ROLES    AGE     VERSION        LABELS
+worker0   Ready     <none>   1d      v1.13.0        ...,kubernetes.io/hostname=worker0
+worker1   Ready     <none>   1d      v1.13.0        ...,kubernetes.io/hostname=worker1
+worker2   Ready     <none>   1d      v1.13.0        ...,kubernetes.io/hostname=worker2
+
+
+
+$ kubectl apply -f pod-definition.yaml
+
+- Verify that your chosen node has a disktype=ssd label:
+
+$ kubectl get nodes --show-labels
+
+NAME      STATUS    ROLES    AGE     VERSION        LABELS
+worker0   Ready     <none>   1d      v1.13.0        ...,disktype=ssd,kubernetes.io/hostname=worker0
+worker1   Ready     <none>   1d      v1.13.0        ...,kubernetes.io/hostname=worker1
+worker2   Ready     <none>   1d      v1.13.0        ...,kubernetes.io/hostname=worker2
+
+
+- Verify that the pod is running on your chosen node:
+$ kubectl get pods -o wide
+
+NAME     READY     STATUS    RESTARTS   AGE    IP           NODE
+nginx    1/1       Running   0          13s    10.200.0.4   worker0
+
+
 
 Node Selector - Limitations
 ----------------------------
-- used a single label and nodeSelector ro achieve simple goal, in case of complex requirements like: a) place the Pod on a Large OR Medium nodes, b) Place the Pod on any nodes that are not small.
+- used a single label and nodeSelector to achieve simple goal, in case of complex requirements like: a) place the Pod on a Large OR Medium nodes, b) Place the Pod on any nodes that are not small.
 
 - These complex usecase can not achieved by Node Selector, use Node Afinity
 
 
 
-Node Afinity
-============================================================
-- primary goal is ensure that pods are scheduled on particular nodes. Node Selector works unless the expression/condition is simple like matching labels ex: size=Large, but we can not provide advanced option like Or/Not expressions/conditions with 'Node Selectors'
 
-- Node Affinity has advanced ability ti limit pod placements on specific nodes. 
+=====================================================================================
+
+Node Name
+
+=====================================================================================
+- Create a pod that gets scheduled to a specific node
+- You can also schedule a pod to one specific node via setting nodeName.
+
+pod-nginx-specific-node.yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+spec:
+  nodeName: foo-node # schedule pod to specific node
+  containers:
+  - name: nginx
+    image: nginx
+    imagePullPolicy: IfNotPresent
+
+
+
+
+
+
+=====================================================================================
+
+Node Afinity
+
+=====================================================================================
+- primary goal is to ensure that pods are scheduled on particular nodes. Node Selector works unless the expression/condition is simple like matching labels ex: size=Large, but we can not provide advanced option like Or/Not expressions/conditions with 'Node Selectors'
+
+- Node Affinity has advanced ability to limit pod placements on specific nodes. 
 
 pod-definition.yaml
 -------------------
@@ -1684,13 +2606,13 @@ affinity:
 	- What if someone changes the label on node after some of the pods were scheduled based on node affinity rule. will the pod continue to run on the same node.
 	
 	- there are 2 stages in the life cycle of a pod when considering node affinity. 1/ DuringScheduling 2/ DuringExecution
-		- requiredDuringScheduling -- schduler mandates the pod to scheduled on nodes with the given affinity rule, if it can't find any nodes with the same labels, pods wont be scheduled. this type is used in cases where the placement of pod is crucial, if there is no matching nodes, pods will not be scheduled. 
+		- requiredDuringScheduling -- schduler mandates the pod to be scheduled on nodes with the given affinity rule, if it can't find any nodes with the same labels, pods wont be scheduled. this type is used in cases where the placement of pod is crucial, if there is no matching nodes, pods will not be scheduled. 
 		
 		- preferredDuringScheduling -- in case the pod placement is less important, if matching nodes are not found, the scheduler will ignore the affinity rule and place the pod on any available nodes. saying the scheduler to try best to place the pod on matching nodes (labels), if can't find one such nodes, just place it anywhere but dont keep the pod in pending state.
 		
-		- DuringExecution is the stage where the pod has been running and a change is made to the system/node (ex: changing the label of a node). ex: admin removing label (size=Large) from the node on which there are already running pods with similar match expression, as of today, there is only one type affinity available (Ignored) for DuringExecution stage means the already running pods will continue to run and change to node affinity will not have any impact once the pods are scheduled.
+		- DuringExecution -- is the stage where the pod has been running and a change is made to the system/node (ex: changing the label of a node). ex: admin removing label (size=Large) from the node on which there are already running pods with similar match expression, as of today, there is only one type affinity available (Ignored) for DuringExecution stage means the already running pods will continue to run i.e. change to node affinity will not have any impact once the pods are scheduled.
 		
-			- a new option for DuringExecution stage i.e. Required to be introduced soon, to evict already running pods that do not meet affinity rule at any point in time. ex: pod running on nodes (labelled with size=Large) will evicted/terminated if the label size=Large is removed from the node.
+			- a new option for DuringExecution stage i.e. Required to be introduced soon, to evict already running pods that do not meet affinity rule at any point in time. ex: pod running on nodes (labelled with size=Large) will be evicted/terminated if the label size=Large is removed from the node.
 			
 	- requiredDuringSchedulingIgnoredDuringExecution
 	- preferredDuringSchedulingIgnoredDuringExecution
@@ -1748,8 +2670,8 @@ blue   3/3     3            3           3m33s
 
 Taints & Tolerations vs Node Affinity
 ======================================================
-- lets say, we have 3 nodes and 3 pods each in 3 colors, blue, red and green. the ultimate aim is to plave blue pod to blue nodem red pod to red node and greem pod to green node.
-	- we are sharing the same kubernetes cluster with other teams, so other team has their own pods and other nodes. we dont want other team pod to be placed on our nodes, enither do we want our red/green/pods to be placed on other teams nodes.
+- lets say, we have 3 nodes and 3 pods each in 3 colors, blue, red and green. the ultimate aim is to place blue pod to blue node, red pod to red node and green pod to green node.
+	- we are sharing the same kubernetes cluster with other teams, so other team has their own pods and other nodes. we dont want other team pod to be placed on our nodes, neither do we want our red/green/pods to be placed on other teams nodes.
 	
 - solving the problem with 'Taints & Tolerations'
 	- apply taint to all of our 3 nodes. i.e. 
@@ -1774,14 +2696,14 @@ Taints & Tolerations vs Node Affinity
 			value: red
 			effect: NoSchedule
 			
-	- when the pods are created, nodes ensure to accept the pods with right tolerations set. so the green pod gets placed to green nodes and blue pod gets placed on blue node however, taints & tolerations does not gurantee that the pods will only prefr these nodes, so the red node ends up on one of other nodes that dont have any taint set. -- not desired.
+	- when the pods are created, nodes will ensure to accept the pods with right tolerations set. so the green pod gets placed to green nodes and blue pod gets placed on blue node however, taints & tolerations does not gurantee that the pods will only prefer these nodes, so the red node ends up on one of other nodes that dont have any taint set. -- not desired.
 	
 	
 - solving the problem with 'Node Affinity'
 	- label the nodes with respective colors.
-		$ kubectl label node node-red color=red
-		$ kubectl label node node-green color=green
-		$ kubectl label node node-blue color=blue
+		$ kubectl label nodes node-red color=red
+		$ kubectl label nodes node-green color=green
+		$ kubectl label nodes node-blue color=blue
 		
 	- add nodeSelectors on the 3 pods to tie them to these nodes.
 		pod-definition.yaml
@@ -1808,12 +2730,18 @@ Taints & Tolerations vs Node Affinity
 		
 - *** Hence combination of both 'Taints & Tolerations' and 'Node Affinity' to be used to completely dedicate specific nodes for specific pods.
 	- apply taints and tolerations on red/green/blue nodes and pods for preventing other nodes being scheduled on these nodes.
-	- use node affinity to prevent our pods from being placed on their nodes. 
+	- use node affinity to prevent our pods from being placed on other nodes. 
 
 	
 
+
+
+
+===================================================================================
+
 Multi-Container Pods
-======================================================
+
+===================================================================================
 - 2 pattern of multi-container pods in kubernetes.
 	- Ambassador
 	- Adaptor
@@ -1909,14 +2837,19 @@ service/kibana          NodePort   10.108.103.235   <none>        5601:30601/TCP
 
 $ kubectl -n elastic-stack logs app	
 
+
 - extract the pod definition.
 $ kubectl -n elastic-stack get pod app -o yaml > app-pod.yaml
 
 
 	
 	
+	
+==================================================================================	
+
 Observability in Kubernetes
-=========================================
+
+==================================================================================
 - Readiness and Liveness Probes, Logging and Monitoring concepts.
 
 POD Status
@@ -1931,7 +2864,7 @@ POD Status
 	POD. If the scheduler cannot find a node to place the POD, it remains in a Pending state. To find out why it’s stuck in a pending state, run the kubectl describe pod command, and it will tell you exactly why. 
 
 	- ContainerCreating
-		- Once the POD is scheduled, it goes into a ContainerCreating status, where the images required for the application are pulled and the container starts.
+		- Once the POD is scheduled to a node, it goes into a ContainerCreating status, where the images required for the application are pulled and the container starts.
 		
 	- Running
 		- Once all the containers in a POD starts, it goes into a running state, where it continues to be until the program completes successfully or is terminated. 
@@ -1941,7 +2874,7 @@ POD Status
 
 - Other failure Statues:
 	- ImagePullBackOff
-		- POD got scheduled on an available node but got stuck dueing image pull stage from docker (ex: incorrect image name)
+		- POD got scheduled on an available node but got stuck during image pull stage from docker (ex: incorrect image name)
 
 - Other status:		
 
@@ -1959,7 +2892,7 @@ POD Conditions
 state of a POD.
 - PodScheduled (true/false): When a POD is scheduled on a Node, the PodScheduled condition is set to True.
 - Initialized (true/false): When the POD is initialized, it’s value is set to True.
-- Containers Ready (true/false): We know that a POD has multiple containers. When all the containers in the POD are ready, the Containers 
+- ContainersReady (true/false): We know that a POD has multiple containers. When all the containers in the POD are ready, the Containers 
 Ready condition is set to True.
 - Ready (true/false): finally the POD itself is considered to be Ready
 
@@ -2033,11 +2966,18 @@ Readiness Probes
 - There are different ways that you can define if an application inside a container is actually ready. You can setup different kinds of tests or Probes.
 	- In case of a web application it could be when the API server is up and running. So you could run a HTTP test to see if the API server responds. ex: HTTP Test - /api/ready 
 	- In case of database, you may test to see if a particular TCP socket is listening. ex: TCP Test - 3306
-	- Or You may simply execute a command within the container to run a custom script that would exit successfully if the application is ready. ex: exec command
+	- Or You may simply execute a command within the container to run a custom script that would exit successfully if the application is ready. 
+	ex: exec command
 
 
 - add a new field called readinessProbe and use the httpGet option. Specify the port and the ready api.	
 - Now when the container is created, kubernetes does not immediately set the ready condition on the container to true, instead, it performs a test to see if the api responds positively. Until then the service does not forward any traffic to the pod, as it sees that the POD is not ready.
+
+
+- successThreshold/failureThreshold:   The number of consecutive successes is configured via the successThreshold field and the number of consecutive failures required to transition from success to failure is failureThreshold. 
+
+- periodSeconds/timeoutSeconds:   The probe runs every periodSeconds and each probe will wait up to timeoutSeconds to complete.  
+
 
 pod-definition.yaml
 -------------------
@@ -2060,6 +3000,7 @@ spec:
 	  
 
 - For http, use the httpGet option with the path and port.
+- httpGet: Send and HTTP GET request to the container at a specified path and port. If the HTTP response status code is a 2xx or 3xx then the container is a success, otherwise, it is a failure.
 
 readinessProbe:
   httpGet:
@@ -2069,19 +3010,39 @@ readinessProbe:
   periodSeconds: 5         // interval in sec between each probe
   failureThreshold: 8      // by deafult 3 unsuccessful attemps of probe then the probe will stop.
 
+
+ex:
+ports:
+    - name: liveness-port
+      containerPort: 8080
+      hostPort: 8080
+
+    livenessProbe:
+      httpGet:
+        path: /healthz
+        port: liveness-port
+
+
+
 - For TCP use the tcpSocket option with port.
+- tcpSocket: Attempt to open a socket to the container on a specified port. If the connection cannot be established, the probe fails.
 
 readinessProbe:
   tcpSocket:
     port: 3306
 
+
+
 - For executing a command specify the exec option with the command and options in an array format. 
+- exec: Issue a command in the container. If the exit code is zero the container is a success, otherwise it is a failed probe.
 
 readinessProbe:
   exec:
     command:
     - cat
-    - /app/is_ready initialDelaySeconds: 10
+    - /app/is_ready 
+  initialDelaySeconds: 10
+  periodSeconds: 5
 
 	
 How readinessProbes are useful in a multi-pod setup
@@ -2094,10 +3055,99 @@ How readinessProbes are useful in a multi-pod setup
 
 
 
+Exercise: readinessProbe
+-------------------------
+1. Create a Pod that uses a readinessProbe with an HTTP GET action:
+
+pod-readiness.yaml
+------------------
+
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    test: readiness
+  name: readiness-http
+spec:
+  containers:
+  - name: readiness
+    image: httpd:2.4.38-alpine
+    ports:
+    - containerPort: 80
+    # Sleep for 30 seconds before starting the server
+    command: ["/bin/sh","-c"]
+    args: ["sleep 30 && httpd-foreground"]
+    readinessProbe:
+      httpGet:
+        path: /
+        port: 80
+      initialDelaySeconds: 3
+      periodSeconds: 3
+
+
+$ kubectl create -f pod-readiness.yaml
+
+- The probe will check for a successful HTTP response from the Pod's IP on port 80. The container command delays starting the server by sleeping for 30 seconds to simulate an intense startup routine. 
+
+
+2. Describe the Pod to see how events related to the readiness probe:
+
+$ kubectl describe pod readiness-http
+
+
+There will be about 10 (x10) failed probes since the container sleeps for 30 seconds and the probe runs every 3 seconds after an initial 3-second delay. You can see when the probe succeeds by looking at the Conditions section:
+
+Readiness:      http-get http://:80/ delay=3s timeout=1s period=3s #success=1 #failure=3
+
+The Ready and ContainerReady Status will both be True once the probe succeeds. They will be False until then. Also, note the Containers section summarizes the configured readiness probe:
+
+
+- To confirm the readiness probes are always running, kill the httpd server processes running in the container
+
+$ kubectl exec readiness-http -- pkill httpd
+
+
+- Describe the Pod and observe the Ready Conditions are False:
+
+$ kubectl describe pod readiness-http
+
+Events:
+  Type     Reason     Age                   From               Message
+  ----     ------     ----                  ----               -------
+  Normal   Scheduled  9m51s                 default-scheduler  Successfully assigned default/readiness-http to ip-10-0-0-11.us-west-2.compute.internal
+  Normal   Pulling    9m50s                 kubelet            Pulling image "httpd:2.4.38-alpine"
+  Normal   Pulled     9m45s                 kubelet            Successfully pulled image "httpd:2.4.38-alpine" in 5.211465198s
+  Normal   Created    64s (x2 over 9m44s)   kubelet            Created container readiness
+  Normal   Started    64s (x2 over 9m44s)   kubelet            Started container readiness
+  Normal   Pulled     64s                   kubelet            Container image "httpd:2.4.38-alpine" already present on machine
+  Warning  Unhealthy  35s (x19 over 9m41s)  kubelet            Readiness probe failed: Get "http://192.168.23.129:80/": dial tcp 192.168.23.129:80: connect: connection refused
+
+
+Conditions:
+  Type              Status
+  Initialized       True 
+  Ready             False 
+  ContainersReady   False 
+  PodScheduled      True
+
+
+$ kubectl get po
+NAME             READY   STATUS    RESTARTS   AGE
+readiness-http   1/1     Running   1          18m
+
+Note: The httpd server processes will recover from being killed after a minute. If more than a minute has passed since you issued the previous instruction's command, you may see both conditions are True.  If that happened, you can kill the httpd processes again and quickly describe the Pod.
+
+
+
+
+
 Liveness Probes
 ====================================================
 - You run the same web application with kubernetes. Every time the application crashes, kubernetes makes an attempt to restart the 
 container to restore service to users. You can see the count of restarts increase in the output (RESTART column) of kubectl get pods command.
+
+- Many applications running for long periods of time eventually transition to broken states, and cannot recover except by being restarted. Kubernetes provides liveness probes to detect and remedy such situations.
+
 
 - However, what if the application is not really working but the container continues to stay alive? 
 	- Say for example, due to a bug in the code, the application is stuck in an infinite loop. As far as kubernetes is concerned, the container is up, so the application is assumed to be up. But the users hitting the container are not served.
@@ -2129,11 +3179,14 @@ spec:
 	
 livenessProbe:
   httpGet:
-    path: /api/ready
+    path: /api/ping
     port: 8080
   initialDelaySeconds: 10  // delay in sec for app to warm up and then kubernetes will start probing. 
   periodSeconds: 5         // interval in sec between each probe. default 10 sec
   failureThreshold: 8      // by deafult 3 unsuccessful attemps of probe then the probe will stop.
+
+
+
 	
 - For TCP use the tcpSocket option with port.
 
@@ -2141,19 +3194,149 @@ livenessProbe:
   tcpSocket:
     port: 3306
 
+
+
 - For executing a command specify the exec option with the command and options in an array format. 
 
 livenessProbe:
   exec:
     command:
     - cat
-    - /app/is_ready initialDelaySeconds: 10
+    - /app/is_ready 
+  initialDelaySeconds: 10
 
+	
+ex:
+- create a Pod that runs a container based on the k8s.gcr.io/busybox image. 
+
+pods/probe/exec-liveness.yaml
+-------------------------------
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    test: liveness
+  name: liveness-exec
+spec:
+  containers:
+  - name: liveness
+    image: k8s.gcr.io/busybox
+    args:
+    - /bin/sh
+    - -c
+    - touch /tmp/healthy; sleep 30; rm -rf /tmp/healthy; sleep 600
+    livenessProbe:
+      exec:
+        command:
+        - cat
+        - /tmp/healthy
+      initialDelaySeconds: 5
+      periodSeconds: 5
+
+- In the configuration file, you can see that the Pod has a single Container. The periodSeconds field specifies that the kubelet should perform a liveness probe every 5 seconds. The initialDelaySeconds field tells the kubelet that it should wait 5 seconds before performing the first probe. To perform a probe, the kubelet executes the command cat /tmp/healthy in the target container. If the command succeeds, it returns 0, and the kubelet considers the container to be alive and healthy. If the command returns a non-zero value, the kubelet kills the container and restarts it.
+
+- When the container starts, it executes this command:
+
+/bin/sh -c "touch /tmp/healthy; sleep 30; rm -rf /tmp/healthy; sleep 600"
+
+
+- For the first 30 seconds of the container's life, there is a /tmp/healthy file. So during the first 30 seconds, the command cat /tmp/healthy returns a success code. After 30 seconds, cat /tmp/healthy returns a failure code.
+
+
+- Create the Pod:
+$ kubectl apply -f https://k8s.io/examples/pods/probe/exec-liveness.yaml
+
+
+- Within 30 seconds, view the Pod events:  The output indicates that no liveness probes have failed yet:
+
+$ kubectl describe pod liveness-exec
+
+FirstSeen    LastSeen    Count   From            SubobjectPath           Type        Reason      Message
+--------- --------    -----   ----            -------------           --------    ------      -------
+24s       24s     1   {default-scheduler }                    Normal      Scheduled   Successfully assigned liveness-exec to worker0
+23s       23s     1   {kubelet worker0}   spec.containers{liveness}   Normal      Pulling     pulling image "k8s.gcr.io/busybox"
+23s       23s     1   {kubelet worker0}   spec.containers{liveness}   Normal      Pulled      Successfully pulled image "k8s.gcr.io/busybox"
+23s       23s     1   {kubelet worker0}   spec.containers{liveness}   Normal      Created     Created container with docker id 86849c15382e;
+23s       23s     1   {kubelet worker0}   spec.containers{liveness}   Normal      Started     Started container with docker id 86849c15382e
+
+
+- After 35 seconds, view the Pod events again:
+
+$ kubectl describe pod liveness-exec
+
+- At the bottom of the output, there are messages indicating that the liveness probes have failed, and the containers have been killed and recreated.
+
+FirstSeen LastSeen    Count   From            SubobjectPath           Type        Reason      Message
+--------- --------    -----   ----            -------------           --------    ------      -------
+37s       37s     1   {default-scheduler }                    Normal      Scheduled   Successfully assigned liveness-exec to worker0
+36s       36s     1   {kubelet worker0}   spec.containers{liveness}   Normal      Pulling     pulling image "k8s.gcr.io/busybox"
+36s       36s     1   {kubelet worker0}   spec.containers{liveness}   Normal      Pulled      Successfully pulled image "k8s.gcr.io/busybox"
+36s       36s     1   {kubelet worker0}   spec.containers{liveness}   Normal      Created     Created container with docker id 86849c15382e; 
+36s       36s     1   {kubelet worker0}   spec.containers{liveness}   Normal      Started     Started container with docker id 86849c15382e
+2s        2s      1   {kubelet worker0}   spec.containers{liveness}   Warning     Unhealthy   Liveness probe failed: cat: can't open '/tmp/healthy': No such file or directory
+
+
+- Wait another 30 seconds, and verify that the container has been restarted:
+
+$ kubectl get pod liveness-exec
+
+NAME            READY     STATUS    RESTARTS   AGE
+liveness-exec   1/1       Running   1          1m
+
+
+
+
+Exercise: livenessProbe
+-------------------------
+
+
+1. Create a Pod that uses a liveness probe to detect broken states:
+
+pod-liveness.yaml
+-----------------
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    test: liveness
+  name: liveness-tcp
+spec:
+  containers:
+  - name: liveness
+    image: busybox:1.30.1
+    ports:
+    - containerPort: 8888
+    # Listen on port 8888 for 30 seconds, then sleep
+    command: ["/bin/sh", "-c"]
+    args: ["timeout 30 nc -p 8888 -lke echo hi && sleep 600"]
+    livenessProbe:
+      tcpSocket:
+        port: 8888
+      initialDelaySeconds: 3
+      periodSeconds: 5
+
+
+$ kubectl create -f pod-liveness.yaml
+
+
+- Recall that liveness probes have the same configuration as readiness probes. The nc (netcat) command listens (the -l option) for connections on port (-p) 8888 and responds with the message hi for the first 30 seconds, after which timeout kills the nc server. The liveness probe attempts to establish a connection with the server every 5 seconds.
+
+
+- Watch the describe output for the Pod to observe when the liveness probe fails and the Pod is restarted:
+
+$ watch kubectl describe pod liveness-tcp
+
+Restart Count:  3
+Liveness:       tcp-socket :8888 delay=3s timeout=1s period=5s #success=1 #failure=3
 	
 
 
+
+=======================================================================
+
 Container Logging
-=================================================
+
+=======================================================================
 Logs - Docker
 --------------
 - Running a docker container for the image: kodekloud/event-simulator which generate random events simulating a web server, streamed to the standard output by the application
@@ -2179,6 +3362,8 @@ $ docker logs -f <container-id>
 Logs - Kubernetes
 -----------------
 - Once the pod is running, we can view the logs using the kubectl logs command with the pod name. Use the –f option to stream the logs live. 
+
+- Kubernetes has basic support for container logging built-in. Kubernetes will capture anything written to standard output and standard error as a log message. For logs that are not written to standard output, More effort is required. You can always copy log files in containers outside of the container or issue commands by running a shell in the container to retrieve the logs you need. 
 
 $ kubectl logs <pod_name>  // if single container pod. use -f option for tail.
 
@@ -2231,8 +3416,404 @@ simple-webapp db
 $ kubectl logs event-simulator-pod event-simulator
 
 
+
+- Create a multi-container Pod that runs a server and a client that sends requests to the server
+
+- The server is similar to the one in the previous lab step except it includes the -v option for verbose output. This causes the server to write some text to standard output. 
+
+- The client container uses nc as well, but instead of listening for connections on a port it connects to the server.
+
+pod-logs.yaml
+--------------
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    test: logs
+  name: pod-logs
+spec:
+  containers:
+  - name: server
+    image: busybox:1.30.1
+    ports:
+    - containerPort: 8888
+    # Listen on port 8888
+    command: ["/bin/sh", "-c"]
+    # -v for verbose mode
+    args: ["nc -p 8888 -v -lke echo Received request"]
+    readinessProbe:
+      tcpSocket:
+        port: 8888
+  - name: client
+    image: busybox:1.30.1
+    # Send requests to server every 5 seconds
+    command: ["/bin/sh", "-c"]
+    args: ["while true; do sleep 5; nc localhost 8888; done"]
+
+
+$ kubectl create -f pod-logs.yaml
+
+
+- Retrieve the logs (standard output messages) from the server container:
+
+syntax: kubectl logs <pod_name> <container_name>
+
+$ kubectl logs pod-logs server 
+
+listening on [::]:8888 ...
+connect to [::ffff:192.168.23.129]:8888 from [::ffff:10.0.0.11]:38170 ([::ffff:10.0.0.11]:38170)
+connect to [::ffff:127.0.0.1]:8888 from [::ffff:127.0.0.1]:37211 ([::ffff:127.0.0.1]:37211)
+connect to [::ffff:127.0.0.1]:8888 from [::ffff:127.0.0.1]:33259 ([::ffff:127.0.0.1]:33259)
+..
+..
+
+
+- After an initial listening message, connection messages for each client request are displayed
+
+
+
+- Display the most recent log (--tail=1) including the timestamp and stream (-f for follow) the logs from the client container:
+- You will see a new request being made every five seconds.
+
+$ kubectl logs -f --tail=1 --timestamps pod-logs client
+
+2022-02-21T10:52:48.331111461Z Received request
+2022-02-21T10:52:53.333188054Z Received request
+2022-02-21T10:52:58.336012161Z Received request
+
+
+
+
+- Now Create an Apache web server and allow access to it via a load balancer:
+
+pod-webserver.yaml
+-------------------
+
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    test: logs
+  name: webserver-logs
+spec:
+  containers:
+  - name: server
+    image: httpd:2.4.38-alpine
+    ports:
+    - containerPort: 80
+    readinessProbe:
+      httpGet:
+        path: /
+        port: 80
+
+
+$ kubectl create -f pod-webserver.yaml
+
+
+- The expose command uses the container port for the Service's port when the --port option isn't provided. In this case, the Service uses port 80 (HTTP).
+
+$ kubectl expose pod webserver-logs --type=LoadBalancer
+
+
+$ kubectl get service
+NAME             TYPE           CLUSTER-IP      EXTERNAL-IP                                                              PORT(S)        AGE
+webserver-logs   LoadBalancer   10.110.244.95   a11db3276b6544b7a861f535dc048df3-307068056.us-west-2.elb.amazonaws.com   80:30537/TCP   58s
+
+
+- The httpd container directs access logs and errors to standard output and standard error, instead of the files.
+- there are lots of request at "/" path which is configured as readiness probe (every 10 secs)
+
+$ kubectl logs webserver-logs server
+
+10.0.0.10 - - [21/Feb/2022:10:56:36 +0000] "GET / HTTP/1.1" 200 45
+10.0.0.10 - - [21/Feb/2022:10:56:46 +0000] "GET / HTTP/1.1" 200 45
+10.0.0.10 - - [21/Feb/2022:10:56:56 +0000] "GET / HTTP/1.1" 200 45
+192.168.23.128 - - [21/Feb/2022:10:56:56 +0000] "GET / HTTP/1.1" 200 45
+192.168.23.128 - - [21/Feb/2022:10:56:56 +0000] "GET /favicon.ico HTTP/1.1" 404 209
+10.0.0.10 - - [21/Feb/2022:10:57:06 +0000] "GET / HTTP/1.1" 200 45
+192.168.23.128 - - [21/Feb/2022:10:57:12 +0000] "GET /oops HTTP/1.1" 404 202
+10.0.0.10 - - [21/Feb/2022:10:57:16 +0000] "GET / HTTP/1.1" 200 45
+
+
+
+- Retrieve the last 10 lines from the conf/httpd.conf file:
+- The tail command with -10 prints the last 10 lines of the given file. Although httpd.conf isn't a log file, you could use the command to access log files in the same way.
+
+$ kubectl exec webserver-logs -it -- tail -10 conf/httpd.conf
+#
+# Note: The following must must be present to support
+#       starting without SSL on platforms with no /dev/random equivalent
+#       but a statically compiled-in mod_ssl.
+#
+<IfModule ssl_module>
+SSLRandomSeed startup builtin
+SSLRandomSeed connect builtin
+</IfModule>
+
+
+
+- Copy the conf/httpd.conf from the container to the bastion host:
+
+- The cp command takes a source file spec (webserver-logs:conf/httpd.conf) and a destination file spec (local-copy-of-httpd.conf). You can also copy from the local file system to a container using cp. To indicate the Pod file system, begin the file spec with the Pod name followed by a colon and then the path. 
+
+	- There are several examples in the help if you ever forget the syntax (kubectl cp --help).
+
+$ kubectl cp webserver-logs:conf/httpd.conf local-copy-of-httpd.conf
+
+$ ls -ltr local-copy-of-httpd.conf 
+-rw-rw-r-- 1 ubuntu ubuntu 20673 Feb 22 03:30 local-copy-of-httpd.conf
+
+
+- Copy /tmp/foo local file to /tmp/bar in a remote pod in a specific container
+
+$ kubectl cp /tmp/foo <some-pod>:/tmp/bar -c <specific-container>
+
+
+- Copy /tmp/foo local file to /tmp/bar in a remote pod in namespace <some-namespace>
+
+$ kubectl cp /tmp/foo <some-namespace>/<some-pod>:/tmp/bar
+
+
+
+- Copy /tmp/foo from a remote pod to /tmp/bar locally
+
+$ kubectl cp <some-namespace>/<some-pod>:/tmp/foo /tmp/bar
+
+
+
+
+Kubernetes Logging Using a Logging Agent and the Sidecar Pattern
+-------------------------------------------------------------------
+
+- The sidecar multi-container pattern uses a "sidecar" container to extend the primary container in the Pod. In the context of logging, the sidecar is a logging agent. The logging agent streams logs from the primary container, such as a web server, to a central location that aggregates logs. 
+
+- To allow the sidecar access to the log files, both containers mount a volume at the path of the log files. 
+
+- In this lab step, you will use an S3 bucket to collect logs. 
+
+- You will use a sidecar that uses Fluentd, a popular data collector often used as a logging layer, with an S3 plugin installed to stream log files in the primary container to S3.
+
+
+1. Store the name of the logs S3 bucket created for you by the Cloud Academy Lab environment:
+
+$ s3_bucket=$(aws s3api list-buckets --query "Buckets[].Name" --output table | grep logs | tr -d \|)
+
+
+2. To verify that the Amazon S3 bucket name was retrieved successfully, enter the following:
+
+$ echo $s3_bucket
+
+- You will see the name of an S3 bucket beginning with cloudacademylabs-k8slogs-.
+
+
+3. Create a ConfigMap that stores the fluentd configuration file:
+
+- ConfigMaps allow you to separate configuration from the container images. This increases the reusability of images.
+- ConfigMaps can be mounted into containers using Kubernetes Volumes.
+- fluent.conf configuration file: 
+	- two log sources are configured in the /var/log directory and their log messages will be tagged with count.format1 and count.format2. 
+	- The configuration also describes streaming all the logs to the S3 logs bucket in the match section.  
+	
+
+fluentd-sidecar-config.yaml
+---------------------------
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluentd-config
+data:
+  fluent.conf: |
+    # First log source (tailing a file at /var/log/1.log)
+    <source>
+      @type tail
+      format none
+      path /var/log/1.log
+      pos_file /var/log/1.log.pos
+      tag count.format1
+    </source>
+
+    # Second log source (tailing a file at /var/log/2.log)
+    <source>
+      @type tail
+      format none
+      path /var/log/2.log
+      pos_file /var/log/2.log.pos
+      tag count.format2
+    </source>
+
+    # S3 output configuration (Store files every minute in the bucket's logs/ folder)
+    <match **>
+      @type s3
+
+      s3_bucket $s3_bucket
+      s3_region us-west-2
+      path logs/
+      buffer_path /var/log/
+      store_as text
+      time_slice_format %Y%m%d%H%M
+      time_slice_wait 1m
+      
+      <instance_profile_credentials>
+      </instance_profile_credentials>
+    </match>
+
+
+$ kubectl create -f fluentd-sidecar-config.yaml
+
+
+
+4. Create a multi-container Pod using a fluentd logging agent sidecar (count-agent): 
+
+- The count container writes the date and a counter variable ($i) in two different log formats to two different log files in the /var/log directory every second.
+
+- The /var/log directory is mounted as a Volume in both the primary count container and the count-agent sidecar so both containers can access the logs.
+
+- The sidecar also mounts the ConfigMap to access the fluentd configuration file. By using a ConfigMap, the same sidecar container can be used for any configuration compared to storing the configuration in the image and having to manage separate container images for each configuration.
+
+
+pod-counter.yaml
+-----------------
+apiVersion: v1
+kind: Pod
+metadata:
+  name: counter
+spec:
+  containers:
+  - name: count
+    image: busybox
+    command: ["/bin/sh", "-c"]
+    args:
+    - >
+      i=0;
+      while true;
+      do
+        # Write two log files along with the date and a counter
+        # every second
+        echo "$i: $(date)" >> /var/log/1.log;
+        echo "$(date) INFO $i" >> /var/log/2.log;
+        i=$((i+1));
+        sleep 1;
+      done
+    # Mount the log directory /var/log using a volume
+    volumeMounts:
+    - name: varlog
+      mountPath: /var/log
+  - name: count-agent
+    image: lrakai/fluentd-s3:latest
+    env:
+    - name: FLUENTD_ARGS
+      value: -c /fluentd/etc/fluent.conf
+    # Mount the log directory /var/log using a volume
+    # and the config file
+    volumeMounts:
+    - name: varlog
+      mountPath: /var/log
+    - name: config-volume
+      mountPath: /fluentd/etc
+  # Use host network to allow sidecar access to IAM instance profile credentials
+  hostNetwork: true
+  # Declare volumes for log directory and ConfigMap
+  volumes:
+  - name: varlog
+    emptyDir: {}
+  - name: config-volume
+    configMap:
+      name: fluentd-config
+
+
+$ kubectl create -f pod-counter.yaml
+
+
+$ kubectl exec counter -c count -it -- /bin/sh
+$ tail -f /var/log/1.log
+
+177: Tue Feb 22 04:07:28 UTC 2022
+178: Tue Feb 22 04:07:29 UTC 2022
+179: Tue Feb 22 04:07:30 UTC 2022
+..
+..
+
+
+$ tail -f /var/log/2.log
+
+Tue Feb 22 04:07:36 UTC 2022 INFO 185
+Tue Feb 22 04:07:37 UTC 2022 INFO 186
+Tue Feb 22 04:07:38 UTC 2022 INFO 187
+..
+..
+
+
+$ kubectl exec counter -c count-agent -it -- /bin/sh
+
+# ls -ltr /fluentd/etc/
+total 0
+lrwxrwxrwx    1 root     root            18 Feb 22 04:36 fluent.conf -> ..data/fluent.conf
+
+# cat /fluentd/etc/fluent.conf 
+# First log source (tailing a file at /var/log/1.log)
+<source>
+  @type tail
+  format none
+  path /var/log/1.log
+  pos_file /var/log/1.log.pos
+  tag count.format1
+</source>
+
+# Second log source (tailing a file at /var/log/2.log)
+<source>
+  @type tail
+  format none
+  path /var/log/2.log
+  pos_file /var/log/2.log.pos
+  tag count.format2
+</source>
+
+# S3 output configuration (Store files every minute in the bucket's logs/ folder)
+<match **>
+  @type s3
+
+  s3_bucket   cloudacademylabs-k8slogs-p3npoajzwjxl  
+  s3_region us-west-2
+  path logs/
+  buffer_path /var/log/
+  store_as text
+  time_slice_format %Y%m%d%H%M
+  time_slice_wait 1m
+  
+  <instance_profile_credentials>
+  </instance_profile_credentials>
+</match>
+
+
+- navigate to aws console -> go to -> s3://cloudacademylabs-k8slogs-p3npoajzwjxl/logs/202202220436_0.txt
+
+2022-02-22T04:36:51+00:00	fluent.info	{"worker":0,"message":"fluentd worker is now running worker=0"}
+2022-02-22T04:36:52+00:00	count.format1	{"message":"6: Tue Feb 22 04:36:52 UTC 2022"}
+2022-02-22T04:36:52+00:00	count.format2	{"message":"Tue Feb 22 04:36:52 UTC 2022 INFO 6"}
+2022-02-22T04:36:53+00:00	count.format2	{"message":"Tue Feb 22 04:36:53 UTC 2022 INFO 7"}
+2022-02-22T04:36:53+00:00	count.format1	{"message":"7: Tue Feb 22 04:36:53 UTC 2022"}
+2022-02-22T04:36:54+00:00	count.format1	{"message":"8: Tue Feb 22 04:36:54 UTC 2022"}
+2022-02-22T04:36:54+00:00	count.format2	{"message":"Tue Feb 22 04:36:54 UTC 2022 INFO 8"}
+2022-02-22T04:36:55+00:00	count.format2	{"message":"Tue Feb 22 04:36:55 UTC 2022 INFO 9"}
+2022-02-22T04:36:55+00:00	count.format1	{"message":"9: Tue Feb 22 04:36:55 UTC 2022"}
+2022-02-22T04:36:56+00:00	count.format2	{"message":"Tue Feb 22 04:36:56 UTC 2022 INFO 10"}
+2022-02-22T04:36:56+00:00	count.format1	{"message":"10: Tue Feb 22 04:36:56 UTC 2022"}
+2022-02-22T04:36:57+00:00	count.format2	{"message":"Tue Feb 22 04:36:57 UTC 2022 INFO 11"}
+2022-02-22T04:36:57+00:00	count.format1	{"message":"11: Tue Feb 22 04:36:57 UTC 2022"}
+2022-02-22T04:36:58+00:00	count.format2	{"message":"Tue Feb 22 04:36:58 UTC 2022 INFO 12"}
+2022-02-22T04:36:58+00:00	count.format1	{"message":"12: Tue Feb 22 04:36:58 UTC 2022"}
+2022-02-22T04:36:59+00:00	count.format2	{"message":"Tue Feb 22 04:36:59 UTC 2022 INFO 13"}
+2022-02-22T04:36:59+00:00	count.format1	{"message":"13: Tue Feb 22 04:36:59 UTC 2022"}
+
+
+
+
+===========================================================================================
+
 Monitor and Debug Applications
-================================================
+
+===========================================================================================
+
 - How do you monitor resource consumption on Kubernetes?
 	- Node level metrics such as the number of nodes in the cluster, how many of them are healthy as well as performance metrics such as CPU. Memory, network and disk utilization.
 	- POD level metrics such as the number of PODs, and performance metrics of each POD such the CPU and Memory consumption.
@@ -2312,9 +3893,81 @@ rabbit     151m         253Mi
 
 
 
+$ kubectl top node
+
+NAME                                       CPU(cores)   CPU%   MEMORY(bytes)   MEMORY%   
+ip-10-0-0-10.us-west-2.compute.internal    60m          3%     585Mi           15%       
+ip-10-0-0-100.us-west-2.compute.internal   163m         8%     1056Mi          27%       
+ip-10-0-0-11.us-west-2.compute.internal    53m          2%     595Mi           15%
+
+
+
+The output displays CPU usage in cores and %. The master and nodes both have 2 CPU cores available. The CPU(cores) column would have a maximum value of 2000m (2000 milliCPU cores = 2 CPU cores). The CPU metrics indicate that the cluster is not under CPU pressure. The MEMORY columns indicate that there is greater than 50% memory available on the nodes. That indicates the cluster if oversized for the current workload. As new Pods are added you should monitor the memory pressure. You should also set CPU and memory limits and requests in your Pod containers to avoid an unexpected degradation in performance.
+
+
+- Use top to view resource utilization metrics for the Pods in the kube-system Namespace:
+
+$ kubectl top pods -n kube-system
+
+NAME                                                               CPU(cores)   MEMORY(bytes)   
+calico-kube-controllers-69496d8b75-hcctr                           2m           12Mi            
+calico-node-667qz                                                  33m          94Mi            
+calico-node-c92km                                                  22m          95Mi            
+calico-node-lm56l                                                  25m          97Mi            
+coredns-74ff55c5b-h7f7t                                            2m           8Mi             
+coredns-74ff55c5b-kk4cw                                            2m           8Mi             
+etcd-ip-10-0-0-100.us-west-2.compute.internal                      15m          45Mi            
+kube-apiserver-ip-10-0-0-100.us-west-2.compute.internal            51m          301Mi           
+kube-controller-manager-ip-10-0-0-100.us-west-2.compute.internal   12m          50Mi            
+kube-proxy-bzbcn                                                   1m           17Mi            
+kube-proxy-d8hvk                                                   1m           15Mi            
+kube-proxy-dqkcz                                                   1m           16Mi            
+kube-scheduler-ip-10-0-0-100.us-west-2.compute.internal            3m           17Mi            
+metrics-server-5986c4b4d6-7lg48                                    1m           13Mi
+
+
+
+- Display the resource utilization of individual containers:
+- The --containers option allows you to understand the resource utilization at a finer granularity when Pods contain multiple containers. In this example, all Pods are only running a single container, however. The NAME column refers to container names.
+
+$ kubectl top pod -n kube-system --containers
+
+POD                                                                NAME                      CPU(cores)   MEMORY(bytes)   
+calico-kube-controllers-69496d8b75-hcctr                           calico-kube-controllers   2m           12Mi            
+calico-node-667qz                                                  calico-node               28m          94Mi            
+calico-node-c92km                                                  calico-node               26m          95Mi            
+calico-node-lm56l                                                  calico-node               29m          97Mi            
+coredns-74ff55c5b-h7f7t                                            coredns                   2m           8Mi             
+coredns-74ff55c5b-kk4cw                                            coredns                   2m           8Mi             
+etcd-ip-10-0-0-100.us-west-2.compute.internal                      etcd                      22m          46Mi            
+kube-apiserver-ip-10-0-0-100.us-west-2.compute.internal            kube-apiserver            50m          301Mi           
+kube-controller-manager-ip-10-0-0-100.us-west-2.compute.internal   kube-controller-manager   11m          50Mi            
+kube-proxy-bzbcn                                                   kube-proxy                1m           17Mi            
+kube-proxy-d8hvk                                                   kube-proxy                1m           15Mi            
+kube-proxy-dqkcz                                                   kube-proxy                1m           16Mi            
+kube-scheduler-ip-10-0-0-100.us-west-2.compute.internal            kube-scheduler            3m           17Mi            
+metrics-server-5986c4b4d6-7lg48                                    metrics-server            1m           13Mi
+
+
+
+- Use a label selector to show only resource utilization for Pods with a k8s-app=kube-dns label:
+
+$ kubectl top pod -n kube-system --containers -l k8s-app=kube-dns
+
+POD                       NAME      CPU(cores)   MEMORY(bytes)   
+coredns-74ff55c5b-h7f7t   coredns   2m           8Mi             
+coredns-74ff55c5b-kk4cw   coredns   3m           8Mi
+
+
+
+
+
+
+==========================================================================================================
 
 POD Design
-=================================================
+
+==========================================================================================================
 
 Labels, Selectors
 ------------------
@@ -2483,8 +4136,16 @@ app-1-zzxdf   1/1     Running   0          8m35s
 
 
 
+
+
+
+
+==============================================================================
+
 Rolling Updates & Rollbacks in Deployments
-=========================================================
+
+==============================================================================
+
 $ kubectl run nginx --image=nginx
 deployment "nginx" created
 
@@ -2527,8 +4188,8 @@ spec:
         image: nginx
   replicas: 3
   selector:
-  matchLabels:
-    type: front-end
+    matchLabels:
+      type: front-end
 	
 $  kubectl create –f deployment-definition.yml
 deployment "myapp-deployment" created
@@ -2564,6 +4225,11 @@ po/myapp-deployment-6795844b58-lfjhv 	1/1 	Running 0 			2m
 - T see wha container image is used:
 $ kubectl describe deployments.apps frontend | grep -i image
     Image:        kodekloud/webapp-color:v1
+
+
+
+
+
 
 Rollout and Versioning
 -----------------------
@@ -2612,6 +4278,9 @@ Deployment Strategy
 	- RollingUpdate 
 		- we do not destroy all of them at once. Instead we take down the older version and bring up a newer version one by one. 
 		- RollingUpdate is the default Deployment Strategy.
+		- RollingUpdateStrategy has two parameters to control rolling updates by creating an upper bound and lower bound on the total number of Pods in the Deployment (for additional information issue kubectl explain deployments.spec.strategy.rollingUpdate):
+			- max unavailable: The maximum number of Pods that can be unavailable during the update.
+			- max surge: The maximum number of Pods that can be scheduled above the desired number of Pods.
 		
 - The difference between the recreate and rollingupdate strategies can also be seen when you view the deployments in detail.
 	-  kubectl describe deployment command to see detailed information regarding the deployments
@@ -2661,7 +4330,7 @@ REVISION  CHANGE-CAUSE
 
 How a deployment performs an upgrade under the hoods. 
 -----------------------------------------------------
-- When a new deployment is created, say to deploy 5 replicas, it first creates a Replicasetautomatically, which in turn creates the number of PODs required to meet the number of replicas.
+- When a new deployment is created, say to deploy 5 replicas, it first creates a Replicaset automatically, which in turn creates the number of PODs required to meet the number of replicas.
 
 - When you upgrade your application, the kubernetes deployment object creates a NEW replicaset under the hoods and starts deploying the containers there. 
 
@@ -2730,6 +4399,7 @@ $ kubectl rollout status deployment nginx
 Waiting for deployment "nginx" rollout to finish: 0 of 1 updated replicas are available...
 deployment "nginx" successfully rolled out
 
+
 - Rollout history
 ------------------
 > kubectl rollout history deployment/myapp-deployment
@@ -2739,7 +4409,10 @@ deployment.extensions/nginx
 REVISION CHANGE-CAUSE
 1     <none>
 
-- Using the --revision flag:
+
+
+Using the --revision flag
+-------------------------------
 - check the status of each revision individually by using the --revision flag
 
 $ kubectl rollout history deployment nginx --revision=1
@@ -2755,7 +4428,10 @@ Pod Template:
  Volumes:   <none>
  
 
-- Using the --record flag:
+Using the --record flag:
+-------------------------
+- The --record option will record the command as an annotation in the resource to help understand what caused the change.
+
 We can use the --record flag to save the command used to create/update a deployment against the revision number. the same will be shows in "change-cause" in kubectl rollout history command.
 
 $ kubectl create -f deployment-definition.yaml --record
@@ -2763,6 +4439,13 @@ $ kubectl create -f deployment-definition.yaml --record
 
 $ kubectl set image deployment nginx nginx=nginx:1.17 --record
 deployment.extensions/nginx image updated
+
+syntax: kubectl set image deployment <deployment_name> <container_name>=<newimage>
+
+ex:
+$ kubectl set image deployment web-server httpd=httpd:2.4.38-alpine --record
+deployment.apps/web-server image updated
+
 
 $ kubectl rollout history deployment nginx
 deployment.extensions/nginx
@@ -2772,14 +4455,57 @@ REVISION 	CHANGE-CAUSE
 2     		kubectl set image deployment nginx nginx=nginx:1.17 --record=true
 
 
-$ kubectl edit deployments. nginx --record
+$ kubectl edit deployments nginx --record
 deployment.extensions/nginx edited
+
 
 $ kubectl rollout history deployment nginx
 REVISION 	CHANGE-CAUSE
 1     		<none>
 2     		kubectl set image deployment nginx nginx=nginx:1.17 --record=true
 3     		kubectl edit deployments. nginx --record=true
+
+
+- --record adds the recent change cause in Annotations field:
+$ kubectl describe deployments.apps web-server
+
+Name:                   web-server
+Namespace:              deployment
+CreationTimestamp:      Mon, 21 Feb 2022 08:17:48 +0000
+Labels:                 app=web-server
+Annotations:            deployment.kubernetes.io/revision: 2
+                        kubernetes.io/change-cause: kubectl edit deployments.apps web-server --record=true
+Selector:               app=web-server
+Replicas:               6 desired | 6 updated | 6 total | 6 available | 0 unavailable
+StrategyType:           RollingUpdate
+..
+..
+..
+
+
+$ kubectl edit deployments.apps web-server --record
+deployment.apps/web-server edited
+
+$ kubectl rollout history deployment web-server 
+deployment.apps/web-server 
+REVISION  CHANGE-CAUSE
+1         <none>
+2         kubectl edit deployments.apps web-server --record=true
+3         kubectl edit deployments.apps web-server --record=true
+
+
+$ kubectl describe deployments.apps web-server 
+Name:                   web-server
+Namespace:              deployment
+CreationTimestamp:      Mon, 21 Feb 2022 08:17:48 +0000
+Labels:                 app=web-server
+Annotations:            deployment.kubernetes.io/revision: 3
+                        kubernetes.io/change-cause: kubectl edit deployments.apps web-server --record=true
+Selector:               app=web-server
+Replicas:               6 desired | 6 updated | 6 total | 6 available | 0 unavailable
+StrategyType:           RollingUpdate
+
+
 
 
 $ kubectl rollout history deployment nginx --revision=3
@@ -2801,19 +4527,196 @@ Pod Template: Labels:    app=nginx
 
 - Rollback
 -----------
-> kubectl rollout undo deployment/myapp-deployment
+- Rollback the previous change:
+
+> kubectl rollout undo deployment myapp-deployment
+
+The undo subcommand will roll back to the most previous revision. If you need to roll back to an even earlier version you can use the --to-revision option and set its value to the revision number, which can be obtained from the history.
+
+
+
+Expose Deployment
+----------------------
+- Expose the webserver Deployment to the internet by creating a Service of type LoadBalancer:
+
+$ kubectl expose deployment web-server --type=LoadBalancer --port=80
+service/web-server exposed
+
+Services provide a single endpoint for communicating with a set of Pods. Services also use label selectors to define the set of Pods.
+
+
+-  Watch the output of get services until the EXTERNAL-IP column has a DNS address
+$ kubectl get service
+NAME         TYPE           CLUSTER-IP    EXTERNAL-IP                                                              PORT(S)        AGE
+web-server   LoadBalancer   10.104.4.32   a3d022efb997b490b9dba79c397013ac-808661487.us-west-2.elb.amazonaws.com   80:30874/TCP   58s
+
+
 
 
 	
 
+==============================================================
 
 Jobs
-==================================
+
+==============================================================
+
 - There are different types of workloads (Web, application and database) that a container can serve. 
 
 -  We have deployed simple web servers that serve users. These workloads are meant to continue to run for a long period of time, until manually taken down. There are other kinds of workloads such as batch processing, analytics or reporting that are meant to carry out a specific task and then finish. 
 
 - For example, performing a computation, processing an image, performing some kind of analytics on a large data set, generating a report and sending an email etc. These are workloads that are meant to live for a short period of time, perform a set of tasks and then finish.
+
+- A Job creates one or more Pods and will continue to retry execution of the Pods until a specified number of them successfully terminate. As pods successfully complete, the Job tracks the successful completions. When a specified number of successful completions is reached, the task (ie, Job) is complete. Deleting a Job will clean up the Pods it created. Suspending a Job will delete its active Pods until the Job is resumed again.
+
+- A simple case is to create one Job object in order to reliably run one Pod to completion. The Job object will start a new Pod if the first Pod fails or is deleted (for example due to a node hardware failure or a node reboot).
+
+- You can also use a Job to run multiple Pods in parallel.
+
+- an example Job config. It computes PI to 2000 places and prints it out. It takes around 10s to complete.
+
+controllers/job.yaml
+---------------------
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pi
+spec:
+  template:
+    spec:
+      containers:
+      - name: pi
+        image: perl
+        command: ["perl",  "-Mbignum=bpi", "-wle", "print bpi(2000)"]
+      restartPolicy: Never
+  backoffLimit: 4
+
+
+$ kubectl create job one-off3 --image=alpine --dry-run=client -o yaml -- sleep 30
+apiVersion: batch/v1
+kind: Job
+metadata:
+  creationTimestamp: null
+  name: one-off3
+spec:
+  template:
+    metadata:
+      creationTimestamp: null
+    spec:
+      containers:
+      - command:
+        - sleep
+        - "30"
+        image: alpine
+        name: one-off3
+        resources: {}
+      restartPolicy: Never
+status: {}
+
+
+$ kubectl get job one-off -o yaml
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  labels:
+    controller-uid: 078adfab-91c2-460d-baa2-51d80b0fc03b
+    job-name: one-off
+  name: one-off
+spec:
+  backoffLimit: 6
+  completions: 1
+  parallelism: 1
+  selector:
+    matchLabels:
+      controller-uid: 078adfab-91c2-460d-baa2-51d80b0fc03b
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        controller-uid: 078adfab-91c2-460d-baa2-51d80b0fc03b
+        job-name: one-off
+    spec:
+      containers:
+      - command:
+        - sleep
+        - "30"
+        image: alpine
+        imagePullPolicy: Always
+        name: one-off
+      dnsPolicy: ClusterFirst
+      restartPolicy: Never
+status:
+  completionTime: "2022-02-21T09:52:43Z"
+  conditions:
+  - lastProbeTime: "2022-02-21T09:52:43Z"
+    lastTransitionTime: "2022-02-21T09:52:43Z"
+    status: "True"
+    type: Complete
+  startTime: "2022-02-21T09:52:09Z"
+  succeeded: 1
+
+
+- backoffLimit: Number of times a Job will retry before marking a Job as failed
+- completions: Number of Pod completions the Job needs before being considered a success
+- parallelism: Number of Pods the Job is allowed to run in parallel
+- spec.template.spec.restartPolicy: Job Pods default to never attempting to restart. Instead, the Job is responsible for managing the restart of failed Pods.
+
+
+- The activeDeadlineSeconds and ttlSecondsAfterFinished are useful for automatically terminating and deleting Jobs.
+
+- The Pods will remain until you delete them or the Job associated with them. Setting a Job's ttlSecondsAfterFinished can free you from manually cleaning up the Pods.
+
+
+
+$ kubectl describe jobs/pi
+
+Name:           pi
+Namespace:      default
+Selector:       controller-uid=c9948307-e56d-4b5d-8302-ae2d7b7da67c
+Labels:         controller-uid=c9948307-e56d-4b5d-8302-ae2d7b7da67c
+                job-name=pi
+Annotations:    kubectl.kubernetes.io/last-applied-configuration:
+                  {"apiVersion":"batch/v1","kind":"Job","metadata":{"annotations":{},"name":"pi","namespace":"default"},"spec":{"backoffLimit":4,"template":...
+Parallelism:    1
+Completions:    1
+Start Time:     Mon, 02 Dec 2019 15:20:11 +0200
+Completed At:   Mon, 02 Dec 2019 15:21:16 +0200
+Duration:       65s
+Pods Statuses:  0 Running / 1 Succeeded / 0 Failed
+Pod Template:
+  Labels:  controller-uid=c9948307-e56d-4b5d-8302-ae2d7b7da67c
+           job-name=pi
+  Containers:
+   pi:
+    Image:      perl
+    Port:       <none>
+    Host Port:  <none>
+    Command:
+      perl
+      -Mbignum=bpi
+      -wle
+      print bpi(2000)
+    Environment:  <none>
+    Mounts:       <none>
+  Volumes:        <none>
+Events:
+  Type    Reason            Age   From            Message
+  ----    ------            ----  ----            -------
+  Normal  SuccessfulCreate  14m   job-controller  Created pod: pi-5rwd7
+
+
+- To view completed Pods of a Job, use 
+$ kubectl get pods
+
+$ kubectl logs <pod_name>
+
+
+- The output is similar to this:
+
+3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679821480865132823066470938446095505822317253594081284811174502841027019385211055596446229489549303819644288109756659334461284756482337867831652712019091456485669234603486104543266482133936072602491412737245870066063155881748815209209628292540917153643678925903600113305305488204665213841469519415116094330572703657595919530921861173819326117931051185480744623799627495673518857527248912279381830119491298336733624406566430860213949463952247371907021798609437027705392171762931767523846748184676694051320005681271452635608277857713427577896091736371787214684409012249534301465495853710507922796892589235420199561121290219608640344181598136297747713099605187072113499999983729780499510597317328160963185950244594553469083026425223082533446850352619311881710100031378387528865875332083814206171776691473035982534904287554687311595628638823537875937519577818577805321712268066130019278766111959092164201989380952572010654858632788659361533818279682303019520353018529689957736225994138912497217752834791315155748572424541506959508295331168617278558890750983817546374649393192550604009277016711390098488240128583616035637076601047101819429555961989467678374494482553797747268471040475346462080466842590694912933136770289891521047521620569660240580381501935112533824300355876402474964732639141992726042699227967823547816360093417216412199245863150302861829745557067498385054945885869269956909272107975093029553211653449872027559602364806654991198818347977535663698074265425278625518184175746728909777727938000816470600161452491921732172147723501414419735685481613611573525521334757418494684385233239073941433345477624168625189835694855620992192221842725502542568876717904946016534668049886272327917860857843838279679766814541009538837863609506800642251252051173929848960841284886269456042419652850222106611863067442786220391949450471237137869609563643719172874677646575739624138908658326459958133904780275901
+
+
 
 In Docker
 -------
@@ -2830,7 +4733,7 @@ CONTAINER ID 	IMAGE 	CREATED 		STATUS 						PORTS
 
 In Kubernetes
 --------------
-- When the pod is created, it runs a container performs the computation task and exits and the pod goes into a Completed state. But, It then recreates the container in an attempt to leave it running. Again the container performs the required computation task and exits. And kubernetes brings it up again. And this continuous to happen until a threshold is reached. 
+- When the pod is created, it runs a container performs the computation task and exits and the pod goes into a Completed state. But, It then recreates the container in an attempt to keep it running. Again the container performs the required computation task and exits. And kubernetes brings it up again. And this continuous to happen until a threshold is reached. 
 
 
 	
@@ -3076,8 +4979,12 @@ random-exit-job-fvf5t 	0/1 	Error 		0
 
 
 
+==========================================================================
+
 CronJobs
-====================================================================
+
+==========================================================================
+
 - A cronjob is a job that can be scheduled. Just like cron tab in Linux
 
 - Say for example you have a job that generates a report and sends an email. the kind: Job runs instantly. Instead you could create a cronjob (kind: CronJob) to schedule and run it periodically as per the given cron expression
@@ -3087,18 +4994,18 @@ cron-job-definition.yaml
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
-  spec:
-    schedule: “*/1 * * * *”
-    jobTemplate:
-      spec:
-		completions: 3
-        parallelism: 3
-        template:
-          spec:
-		    restartPolicy: Never
-			containers:
-			- name: reporting-tool
-			  image: reporting-tool
+spec:
+  schedule: “*/1 * * * *”
+  jobTemplate:
+    spec:
+	  completions: 3
+	  parallelism: 3
+	  template:
+	    spec:
+		  restartPolicy: Never
+		  containers:
+		  - name: reporting-tool
+		    image: reporting-tool
 			  
 $ kubectl create –f cron-job-definition.yaml
 OR
@@ -3127,23 +5034,65 @@ $ kubectl get cronjob
 
 
 
+
+cronjob-example.yaml
+---------------------
+
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: cronjob-example
+spec:
+  schedule: "*/1 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - image: alpine
+            name: fail
+            command: ['date']
+          restartPolicy: Never
+		  
+		  
+$ kubectl create -f cronjob-example.yaml
+
+- The CronJob spec is mainly a schedule with a template for creating Jobs (jobTemplate). 
+
+- Observe the Events of the CronJob to confirm that it is creating Jobs every minute: 
+$ watch kubectl describe cronjob cronjob-example
+
+
+
+
+================================================================================
+
 Networking Basic in Kubernetes
-=========================================================================
-- Unlike in the docker world were an IP address is always assigned to a Docker CONTAINER, in Kubernetes the IP address is assigned to a POD. Each POD in kubernetes gets its own internal IP Address.
+
+================================================================================
+
+- Unlike in the docker world where an IP address is always assigned to a Docker CONTAINER, in Kubernetes the IP address is assigned to a POD. Each POD in kubernetes gets its own internal IP Address.
 
 - When you deploy multiple PODs, they all get a separate IP assigned. The PODs can communicate to each other through this IP. But accessing other PODs using this internal IP address MAY not be a good idea as its subject to change when PODs are recreated. 
 
 - When a kubernetes cluster is SETUP, kubernetes does NOT automatically setup any kind of networking to handle these issues.
 
-	- all the containers or PODs in a kubernetes cluster MUST be able to communicate with one another without having to configure NAT
+	- all the containers or PODs in a kubernetes cluster MUST be able to communicate with eacg other without having to configure NAT
 	
 - Fortunately, we don’t have to set it up ALL on our own as there are multiple pre-built solutions available. Some of them are the cisco ACI networks, Cilium, Big Cloud Fabric, Flannel, Vmware NSX-t and Calico.
 	- Depending on the platform you are deploying your Kubernetes cluster on you may use any of these solutions.
 	
 	
 	
+
+
+
+=============================================================================	
+
 Kubernetes Services
-=========================================================================
+
+=============================================================================
+
 - Kubernetes Services enable communication between various components within and outside of the application.
 
 - Kubernetes Services helps us connect applications together with other applications or users, front-end, back-end, external data source
@@ -3155,8 +5104,8 @@ Kubernetes Services
 	-----------
 		-  NodePort service listens to a port on the Node and forwards requests to PODs. NodePort were the service makes an internal POD accessible on a Port on the Node
 		-  3 ports are involved. 
-			- the port on the POD where the actual web server is running is port 80. referred as targetPort, because that is were the service forwards the requests to. 
-			- the port on the service itself. referred to as the port. The service is in fact like a virtual server inside the node. Inside the cluster it has its own IP address. And that IP address is called the Cluster-IP of the service. 
+			- the port on the POD where the actual web server is running is port 80. referred as targetPort, because that is where the service forwards the requests to. 
+			- the port on the service itself. referred as the port. The service is in fact like a virtual server inside the node. Inside the cluster it has its own IP address. And that IP address is called the Cluster-IP of the service. 
 			- the port on the Node itself which we use to access the web server externally, known as the NodePort. NodePorts can only be in a valid range which is from 30000 to 32767
 			
 service-definition.yml
@@ -3240,7 +5189,7 @@ back-end 	ClusterIP 	10.106.127.123 	<none> 			80/TCP 		2m
 		
 		- Using NodePort service type we expose the application to the end users on a high end port of the Nodes (30000 to 32767), but we cant share IP of kubernetes cluster nodes to end user.
 		
-		- For this, you will be required to setup a separate Load Balancer VM in your environment. In this case I deploy a new VM for load balancer purposes and configure it to forward requests that come to it to any of the Ips of the Kubernetes nodes. then configure my organizations DNS to point to this load balancer when a user hosts http://myapp.com
+		- For this, you will be required to setup a separate Load Balancer VM in your environment. In this case I deploy a new VM for load balancer purposes and configure it to forward requests that come to it to any of the Ips of the Kubernetes nodes. then configure my organizations DNS to point to this load balancer when a user access http://myapp.com
 		
 		-  Now setting up that load balancer by myself is a tedious task, and I might have to do that in my local or onprem environment. However, if I happen to be on a supported CloudPlatform, like Google Cloud Platform, I could leverage the native load balancing functionalities of 
 the cloud platform to set this up. 
@@ -3276,9 +5225,109 @@ front-end 		LoaBalancer 10.106.127.123 	<Pending> 		80/TCP 		2m
 
 
 
-===============================================================
+- Kubernetes ServiceTypes allow you to specify what kind of Service you want. The default is ClusterIP.
+
+	- ClusterIP: Exposes the Service on a cluster-internal IP. Choosing this value makes the Service only reachable from within the cluster. This is the default ServiceType.
+	
+	- NodePort: Exposes the Service on each Node's IP at a static port (the NodePort). A virtual ClusterIP Service, to which the NodePort Service routes, is automatically created. You'll be able to contact the NodePort Service, from outside the cluster, by requesting <NodeIP>:<NodePort>.
+	
+	- LoadBalancer: Exposes the Service externally using a cloud provider's load balancer. NodePort and ClusterIP Services, to which the external load balancer routes, are automatically created. 
+	In that case, instead of creating a service of type NodePort for your wear application, you could set it to type LoadBalancer. When you do that Kubernetes would still do everything that it has to do for a NodePort, which is to provision a high port for the service, but in addition to that kubernetes also sends a request to Google Cloud Platform to provision a native load balancer for this service. GCP would then automatically deploy a LoadBalancer configured to route traffic to the service ports on all the nodes and return its information to kubernetes. The LoadBalancer has an external IP that can be provided to users to access the application. In this case we set the DNS to point to this IP and users access the application using the URL.
+
+
+
+Discovering services
+-----------------------------------------
+
+- Kubernetes supports 2 primary modes of finding a Service - environment variables and DNS.
+
+- Environment variables
+
+When a Pod is run on a Node, the kubelet adds a set of environment variables for each active Service. It adds {SVCNAME}_SERVICE_HOST and {SVCNAME}_SERVICE_PORT variables, where the Service name is upper-cased and dashes are converted to underscores. It also supports variables (see makeLinkVariables) that are compatible with Docker Engine's "legacy container links" feature.
+
+For example, the Service redis-master which exposes TCP port 6379 and has been allocated cluster IP address 10.0.0.11, produces the following environment variables:
+
+REDIS_MASTER_SERVICE_HOST=10.0.0.11
+REDIS_MASTER_SERVICE_PORT=6379
+REDIS_MASTER_PORT=tcp://10.0.0.11:6379
+REDIS_MASTER_PORT_6379_TCP=tcp://10.0.0.11:6379
+REDIS_MASTER_PORT_6379_TCP_PROTO=tcp
+REDIS_MASTER_PORT_6379_TCP_PORT=6379
+REDIS_MASTER_PORT_6379_TCP_ADDR=10.0.0.11
+
+
+- When you have a Pod that needs to access a Service, and you are using the environment variable method to publish the port and cluster IP to the client Pods, you must create the Service before the client Pods come into existence. Otherwise, those client Pods won't have their environment variables populated.
+
+
+
+
+- DNS
+
+- You can (and almost always should) set up a DNS service for your Kubernetes cluster using an add-on.
+
+- If DNS has been enabled throughout your cluster then all Pods should automatically be able to resolve Services by their DNS name.
+
+- For example, if you have a Service called my-service in a Kubernetes namespace my-ns, the control plane and the DNS Service acting together create a DNS record for my-service.my-ns. Pods in the my-ns namespace should be able to find the service by doing a name lookup for my-service (my-service.my-ns would also work).
+
+Pods in other namespaces must qualify the name as my-service.my-ns. These names will resolve to the cluster IP assigned for the Service
+
+
+=======================================================================================
+
+Naming comvension as per DNS Subdomain Names
+
+=======================================================================================
+- Most resource types require a name that can be used as a DNS subdomain name
+- This means the name must:
+	- contain no more than 253 characters
+	- contain only lowercase alphanumeric characters, '-' or '.'
+	- start with an alphanumeric character
+	- end with an alphanumeric character
+	
+
+- RFC 1123 Label Names
+This means the name must:
+	- contain at most 63 characters
+	- contain only lowercase alphanumeric characters or '-'
+	- start with an alphanumeric character
+	- end with an alphanumeric character
+
+
+- Multi-Port Services
+
+For some Services, you need to expose more than one port. Kubernetes lets you configure multiple port definitions on a Service object. When using multiple ports for a Service, you must give all of your ports names so that these are unambiguous. For example:
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-service
+spec:
+  selector:
+    app: MyApp
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 9376
+    - name: https
+      protocol: TCP
+      port: 443
+      targetPort: 9377
+
+
+
+- Choosing your own IP address
+	- You can specify your own cluster IP address as part of a Service creation request. To do this, set the .spec.clusterIP field. For example, if you already have an existing DNS entry that you wish to reuse, or legacy systems that are configured for a specific IP address and difficult to re-configure.
+
+	- The IP address that you choose must be a valid IPv4 or IPv6 address from within the service-cluster-ip-range CIDR range that is configured for the API server. If you try to create a Service with an invalid clusterIP address value, the API server will return a 422 HTTP status code to indicate that there's a problem
+
+
+=======================================================================================
+
 Ingress Resource and Ingress controller
-===============================================================
+
+=======================================================================================
+
 - read the info detailed in Ingress section in KodeKloud-Kubernetes+-CKAD.pdf to understand the pain points of using NodePort/LoadBalancer service types in exposing the applications running on pods via deployments.
 
 - Ingress helps your users access your application using a single Externally accessible URL, that you can configure to route to different services within your cluster based on the URL path, at the same time terminate TLS.
@@ -3335,34 +5384,34 @@ metadata:
   name: nginx-ingress-controller
 spec:
   replicas: 1
-selector:
-  matchLabels:
-    name: nginx-ingress
-template:
-  metadata:
-    labels:
+  selector:
+    matchLabels:
       name: nginx-ingress
-spec:
-  containers:
-  - name: nginx-ingress-controller
-    image: quay.io/kubernetes-ingresscontroller/nginx-ingress-controller:0.21.0
-    args:
-    - /nginx-ingress-controller
-    - --configmap=$(POD_NAMESPACE)/nginx-configuration
-  env:
-  - name: POD_NAME
-    valueFrom:
-      fieldRef:
-        fieldPath: metadata.name
-  - name: POD_NAMESPACE
-      valueFrom:
-        fieldRef:
-          fieldPath: metadata.namespace
-  ports:
-  - name: http
-    containerPort: 80
-  - name: https
-    containerPort: 443
+  template:
+    metadata:
+      labels:
+        name: nginx-ingress
+    spec:
+      containers:
+      - name: nginx-ingress-controller
+        image: quay.io/kubernetes-ingresscontroller/nginx-ingress-controller:0.21.0
+        args:
+        - /nginx-ingress-controller
+        - --configmap=$(POD_NAMESPACE)/nginx-configuration
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+          ports:
+          - name: http
+            containerPort: 80
+          - name: https
+            containerPort: 443
 
 
 
@@ -3508,15 +5557,15 @@ spec:
   rules:
   - host: wear.my-online-store.com
     http:
-    paths:
-    - backend:
-        serviceName: wear-service
-        servicePort: 80
+      paths:
+        - backend:
+          serviceName: wear-service
+          servicePort: 80
 		
   - host: watch.my-online-store.com
     http:
-    paths:
-    - backend:
+      paths:
+      - backend:
         serviceName: watch-service
         servicePort: 80
 
@@ -3527,6 +5576,11 @@ host field. The host field in each rule matches the specified value with the dom
 
 - You can still have multiple path specifications in each of these to handle different URL paths.
 
+
+
+TLS
+- You can secure an Ingress by specifying a Secret that contains a TLS private key and certificate. The Ingress resource only supports a single TLS port, 443, and assumes TLS termination at the ingress point (traffic to the Service and its Pods is in plaintext).
+- 
 
 
 Exercise:
@@ -3842,7 +5896,9 @@ Events:       <none>
 
 
 ===============================================================================
+
 Network Policy
+
 ===============================================================================
 
 -  you have a web server serving front-end to users, an app server serving backend API’s and a database server. The user sends in a request to the web server at port 80. The web server then sends a request to the API server at port 5000 in the backend. The API server then fetches data from the 
@@ -3862,8 +5918,8 @@ hence the traffic flow and rules will be:
 
 1/ An Ingress rule that is required to accept HTTP traffic on port 80 on the web server.
 2/ An Egress rule to allow traffic from the web server to port 5000 on the API server.
-3/ An ingress rule to accept traffic on port 5000 on the API server.
-4/ An egress rule to allow traffic to port 3306 on the database server.
+3/ An ingress rule to accept incoming traffic on port 5000 on the API server.
+4/ An egress rule to allow traffic from api server to port 3306 on the database server.
 5/ An egress rule to allow traffic to port 3306 on the database server.
 
 
@@ -3923,10 +5979,183 @@ spec:
 - remember, even in a cluster configured with a solution that does not support network policies, you can still create the policies, but they will just not be enforced. You will not get an error message saying the networking solution does not support network policies.
 
 
+- *** podSelector: This selects particular Pods in the same namespace as the NetworkPolicy which should be allowed as ingress sources or egress destinations.
+
+
+
+- An example NetworkPolicy might look like this:
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: test-network-policy
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      role: db
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - ipBlock:
+        cidr: 172.17.0.0/16
+        except:
+        - 172.17.1.0/24
+    - namespaceSelector:
+        matchLabels:
+          project: myproject
+    - podSelector:
+        matchLabels:
+          role: frontend
+    ports:
+    - protocol: TCP
+      port: 6379
+  egress:
+  - to:
+    - ipBlock:
+        cidr: 10.0.0.0/24
+    ports:
+    - protocol: TCP
+      port: 5978
+	  
+	  
+
+- Behavior of to and from selectors 
+	- podSelector: This selects particular Pods in the same namespace as the NetworkPolicy which should be allowed as ingress sources or egress destinations.
+	
+	- namespaceSelector: This selects particular namespaces for which all Pods should be allowed as ingress sources or egress destinations.
+	
+	- namespaceSelector and podSelector: A single to/from entry that specifies both namespaceSelector and podSelector selects particular Pods within particular namespaces. Be careful to use correct YAML syntax; this policy:
+	
+	...
+	  ingress:
+	  - from:
+		- namespaceSelector:
+			matchLabels:
+			  user: alice
+		- podSelector:
+			matchLabels:
+			  role: client
+	  ...
+  
+	- contains two elements in the from array, and allows connections from Pods in the local Namespace with the label role=client, or from any Pod in any namespace with the label user=alice.
+
+
+
+
+- Default policies
+	- By default, if no policies exist in a namespace, then all ingress and egress traffic is allowed to and from pods in that namespace. 
+	
+
+- Default deny all ingress traffic. selects all pods but does not allow any ingress traffic to those pods.
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+
+
+
+
+- Allow all ingress traffic
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-all-ingress
+spec:
+  podSelector: {}
+  ingress:
+  - {}
+  policyTypes:
+  - Ingress
+
+
+
+
+
+- Default deny all egress traffic. selects all pods but does not allow any egress traffic from those pods.
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-egress
+spec:
+  podSelector: {}
+  policyTypes:
+  - Egress
+
+
+- Allow all egress traffic
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-all-egress
+spec:
+  podSelector: {}
+  egress:
+  - {}
+  policyTypes:
+  - Egress
+
+
+
+- Default deny all ingress and all egress traffic
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+
+
+
+
+- Targeting a range of Ports. with the usage of the endPort field.
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: multi-port-egress
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      role: db
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - ipBlock:
+        cidr: 10.0.0.0/24
+    ports:
+    - protocol: TCP
+      port: 32000
+      endPort: 32768
+	  
+ 
+
+
 Exercises on Network Policy
 ----------------------------------------------------------------------------------
 
-- Network policy wont be visible in kubectl get all command.
+- *** Network policy wont be visible in kubectl get all command.
 
 $ kubectl get netpol
 
@@ -4040,8 +6269,12 @@ Spec:
 
 
 
+
+
 ==========================================================================================
+
 Persistent volumes
+
 ==========================================================================================
 
 persist data in Docker
@@ -4271,11 +6504,54 @@ mysql
 
 Volume Types in Kubernetes
 ----------------------------------
-- various storage options available. 
+- various storage options available. a/ hostPath, b/ configMap, c/ secret, d/ awsElasticBlockStore, e/ emptyDir
 
-- hostPath option for storage will be allocated on node where the POD is running, not for production.
+- hostPath
+	- hostPath option for storage will be allocated on node where the POD is running, not for production.
+	- A hostPath volume mounts a file or directory from the host node's filesystem into your Pod.
+	- For example, some uses for a hostPath are:
+		- running a container that needs access to Docker internals; use a hostPath of /var/lib/docker
+	- In addition to the required path property, you can optionally specify a type for a hostPath volume.
+	- The supported values for field type are:
+		- DirectoryOrCreate:	If nothing exists at the given path, an empty directory will be created there as needed with permission set to 0755, having the same group and ownership with Kubelet.
+		- Directory:	A directory must exist at the given path
+		- FileOrCreate:	If nothing exists at the given path, an empty file will be created there as needed with permission set to 0644, having the same group and ownership with Kubelet.
+		- File:	A file must exist at the given path
+		
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-webserver
+spec:
+  containers:
+  - name: test-webserver
+    image: k8s.gcr.io/test-webserver:latest
+    volumeMounts:
+    - mountPath: /opt/aaa1
+      name: mydir
+    - mountPath: /opt/aaa2/1.txt
+      name: myfile
+	- mountPath: /test-pd
+      name: test-volume
+  volumes:
+  - name: mydir
+    hostPath:
+      path: /var/local/aaa     # Ensure the directory is created.
+      type: DirectoryOrCreate
+  - name: myfile
+    hostPath:
+      path: /var/local/aaa/1.txt  # Ensure the file file is created.
+      type: FileOrCreate
+  - name: test-volume
+    hostPath:
+      # directory location on host
+      path: /data                # directory location on host must exist
+      # this field is optional
+      type: Directory
 
-- to configure an AWS Elastic Block Store volume as the storage or the volume, we replace hostPath field of the volume with awsElasticBlockStore field along with the volumeID and filesystem type. The Volume storage will now be on AWS EBS
+
+- Cloud volume provider:
+	- to configure an AWS Elastic Block Store volume as the storage or the volume, we replace hostPath field of the volume with awsElasticBlockStore field along with the volumeID and filesystem type. The Volume storage will now be on AWS EBS
 
 
 volumes:
@@ -4284,6 +6560,32 @@ volumes:
     volumeID: <volume-id>
     fsType: ext4
 	
+
+
+emptyDir
+--------
+- An emptyDir volume is first created when a Pod is assigned to a node, and exists as long as that Pod is running on that node. As the name says, the emptyDir volume is initially empty.
+
+- All containers in the Pod can read and write the same files in the emptyDir volume, though that volume can be mounted at the same or different paths in each container.
+
+- When a Pod is removed from a node for any reason, the data in the emptyDir is deleted permanently.
+
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-pd
+spec:
+  containers:
+  - image: k8s.gcr.io/test-webserver
+    name: test-container
+    volumeMounts:
+    - mountPath: /cache
+      name: cache-volume
+  volumes:
+  - name: cache-volume
+    emptyDir: {}
+
 	
 
 
@@ -4340,6 +6642,189 @@ pv-vol1 1Gi 		RWO 			Retain 				Available 									3m
 
 
 
+Ephemeral Volume Types in Kubernetes
+----------------------------------------------------------------------
+- In Kubernetes, ephemeral volumes have their lifetime tied to the lifetime of the Pod they are mounted in. Once the Pod is deleted, so is the volume and its data. 
+
+- *** It is important to note that the data DOES survive across container restarts.
+
+
+- There are a variety of use cases for ephemeral volumes, including:
+	- Sharing data between containers in a Pod (multi-container Pods)
+	- Providing read-only input configuration data to a Pod
+	- Temporary data caches
+	
+- Providing read-only configuration data to Pods is best suited by using Kubernetes ConfigMaps and Secrets. 
+	- When ConfigMaps and Secrets are mounted as volumes, the data is stored in an ephemeral volume.
+	
+	
+
+1. Use an emptyDir volume to store the logs of a Pod's container that is recording random coin tosses:
+
+cat << EOF | kubectl apply -f -
+apiVersion: v1
+kind: Pod
+metadata:
+  name: coin-toss
+spec:
+  containers:
+  - name: coin-toss
+    image: busybox:1.33.1
+    command: ["/bin/sh", "-c"]
+    args:
+    - >
+      while true;
+      do
+        # Record coint tosses
+        if [[ $(($RANDOM % 2)) -eq 0 ]]; then echo Heads; else echo Tails; fi >> /var/log/tosses.txt;
+        sleep 1;
+      done
+    # Mount the log directory /var/log using a volume
+    volumeMounts:
+    - name: varlog
+      mountPath: /var/log
+  # Declare log directory volume an emptyDir ephemeral volume
+  volumes:
+  - name: varlog
+    emptyDir: {}
+EOF
+
+
+- The fields for creating a volume (spec.volumes) and mounting the volume in the container (spec.containers.volumeMounts) are independent of whether you use ephemeral or persistent volumes. 
+
+- The only way to know the Pod is using an ephemeral volume is by seeing the volume's emptyDir field. 
+
+- In the manifest the braces (emptyDir: {}) symbolize an empty object because the emptyDir is using default configuration values. 
+
+- The emptyDir volume type creates an empty directory for use by the Pod and shares the lifetime of the Pod, i.e. it is ephemeral. 
+
+- The directory is created on the Node's file system by default and can therefore survive node restarts (assuming the Pod remains scheduled on the Node).
+
+
+
+- List the contents of the volume on the Node that is running the Pod:
+- The volume starts empty but now has the tosses.txt file which logs the coin toss results for the Pod.
+- You will use kubectl exec to access the file in the coming instructions
+
+pod_node=$(kubectl get pod coin-toss -o jsonpath='{.status.hostIP}')
+pod_id=$(kubectl get pod coin-toss -o jsonpath='{.metadata.uid}')
+ssh $pod_node -oStrictHostKeyChecking=no sudo ls /var/lib/kubelet/pods/$pod_id/volumes/kubernetes.io~empty-dir/varlog
+
+
+*** If you are concerned about storing potentially sensitive data in a volume that is accessible on a Node's file system, you can configure emptyDir to use memory rather than disk storage. (emptyDir.medium field to "Memory")
+
+$ kubectl explain pod.spec.volumes.emptyDir
+
+- The medium can be configured to use tmpfs memory-based storage by setting medium: Memory. 
+
+- While tmpfs is very fast, be aware that unlike disks, tmpfs is cleared on node reboot and any files you write count against your container's memory limit.
+
+- This will result in higher performance than using disk-backed volumes. However, the memory used does counts against container memory limits. Note that when using memory (RAM) the data will not survive Node restarts in contrast to using disk. 
+
+
+$ kubectl exec coin-toss -- wc -l /var/log/tosses.txt
+452 /var/log/tosses.txt
+
+
+
+
+- set the Pod to use a new image and wait for the Pod to restart its container:
+- It takes under a minute to restart. so the watch on get pods shows 2 rows and finally the one with restart count 1 running
+
+kubectl set image pod coin-toss coin-toss=busybox:1.34.0
+kubectl get pods -w
+
+NAME        READY   STATUS    RESTARTS   AGE
+coin-toss   1/1     Running   0          9m2s
+coin-toss   1/1     Running   1          9m39s
+
+
+
+- re-issue the exec command to verify the count didn't restart from zero:
+
+$ kubectl exec coin-toss -- wc -l /var/log/tosses.txt
+969 /var/log/tosses.txt
+
+- This confirms the ephemeral volume is tied to the Pod's lifetime, not the container's. If the ephemeral volume had not been used and only the container's writable layer storage was used, the data would have been lost on restarting the container. 
+
+
+
+- Delete the Pod:
+
+$ kubectl delete pod coin-toss
+
+
+- Confirm the volume has been deleted by attempting to list the Pod's volume's contents on the Node hosting the Pod:
+- This confirms the data is lost once the Pod is deleted.
+
+$ ssh $pod_node -oStrictHostKeyChecking=no sudo ls /var/lib/kubelet/pods/$pod_id/volumes/kubernetes.io~empty-dir/varlog
+
+No such file or directory
+
+
+
+*** Because ephemeral storage is finite on each Node, you can configure requests and limits for it, just as you can for CPU and memory. 
+
+- Create a Pod that uses an emptyDir ephemeral volume for its data and requests and limits the Pod's total ephemeral storage (ephemeral-storage) to the very low value of 1 kibibyte (1Ki):
+
+cat << EOF | kubectl apply -f -
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cache
+spec:
+  containers:
+  - name: cache
+    image: redis:6.2.5-alpine
+    resources:
+      requests:
+        ephemeral-storage: "1Ki"
+      limits:
+        ephemeral-storage: "1Ki"
+    volumeMounts:
+    - name: ephemeral
+      mountPath: "/data"
+  volumes:
+    - name: ephemeral
+      emptyDir:
+        sizeLimit: 1Ki
+EOF
+
+- The resources object is the same one used for CPU and memory although only ephemeral-storage is declared in this example.
+
+
+
+- Describe the Pod and see what the result of the low ephemeral storage limit is:
+$ kubectl describe pod cache
+
+Events:
+  Type     Reason     Age   From               Message
+  ----     ------     ----  ----               -------
+  Normal   Scheduled  13s   default-scheduler  Successfully assigned ephemeral/cache to ip-10-0-0-11.us-west-2.compute.internal
+  Normal   Pulling    12s   kubelet            Pulling image "redis:6.2.5-alpine"
+  Normal   Pulled     9s    kubelet            Successfully pulled image "redis:6.2.5-alpine" in 3.662684914s
+  Normal   Created    8s    kubelet            Created container cache
+  Normal   Started    8s    kubelet            Started container cache
+  Warning  Evicted    3s    kubelet            Container cache exceeded its local ephemeral storage limit "1Ki".
+  Normal   Killing    3s    kubelet            Stopping container cache
+  
+  
+$ kubectl get po
+NAME    READY   STATUS    RESTARTS   AGE
+cache   0/1     Evicted   0          74s
+
+
+- The Pod is Scheduled onto a Node because there is a Node in the cluster satisfying the ephemeral storage request. After the Pod is Started, its container exceeds the ephemeral storage limit set (Usage of EmptyDir volume "ephemeral" exceeds the limit "1Ki"). 
+
+- The kubelet then evicts the Pod and it is subsequently killed.
+
+
+
+
+
+
+
+
 Persistent Volume Claim
 ----------------------------------------------------------------------
 
@@ -4369,6 +6854,11 @@ Binding
 - If there are no volumes available the Persistent Volume Claim will remain in a pending state, until newer volumes are made available to the cluster. Once newer volumes are available the claim would automatically be bound to the newly available volume.
 
 - persistentvolume-controller helps in binding PVC to pv.
+
+
+- A user creates, or in the case of dynamic provisioning, has already created, a PersistentVolumeClaim with a specific amount of storage requested and with certain access modes. A control loop in the master watches for new PVCs, finds a matching PV (if possible), and binds them together. If a PV was dynamically provisioned for a new PVC, the loop will always bind that PV to the PVC. Otherwise, the user will always get at least what they asked for, but the volume may be in excess of what was requested. Once bound, PersistentVolumeClaim binds are exclusive, regardless of how they were bound. A PVC to PV binding is a one-to-one mapping, using a ClaimRef which is a bi-directional binding between the PersistentVolume and the PersistentVolumeClaim.
+
+- Claims will remain unbound indefinitely if a matching volume does not exist. Claims will be bound as matching volumes become available. For example, a cluster provisioned with many 50Gi PVs would not match a PVC requesting 100Gi. The PVC can be bound when a 100Gi PV is added to the cluster
 
 pvc-definition.yaml
 ---------------------
@@ -4409,7 +6899,7 @@ myclaim 	Bound 	pv-vol1 	1Gi 		RWO 							43m
 - 3 options for the mapped PVs in case PVC is deleted.
 	- Retain (default). will remain until it is manually deleted by the administrator, BUT the PV will no longer be available for re-use by any other claims.
 	
-	- auto delete: This way as soon as the claim is deleted, the volume will be deleted as well. 
+	- delete: This way as soon as the claim is deleted, the volume will be deleted as well. 
 	
 	- recycle: the data in the volume will be scrubbed before making it available to other claims
 
@@ -4419,7 +6909,11 @@ persistentvolumeclaim "myclaim" deleted
 
 Claims As Volumes in Pod
 -----------------------------------------
-- Pods access storage by using the claim as a volume. Claims must exist in the same namespace as the Pod using the claim. The cluster finds the claim in the Pod's namespace and uses it to get the PersistentVolume backing the claim.
+- Pods use claims as volumes. The cluster inspects the claim to find the bound volume and mounts that volume for a Pod. For volumes that support multiple access modes, the user specifies which mode is desired when using their claim as a volume in a Pod.
+
+- Once a user has a claim and that claim is bound, the bound PV belongs to the user for as long as they need it. Users schedule Pods and access their claimed PVs by including a persistentVolumeClaim section in a Pod's volumes block. 
+
+- Pods access storage by using the claim as a volume. Claims must exist in the same namespace as the Pod using the claim. The cluster finds the claim in the Pod's namespace and uses it to get the PersistentVolume backing the claim. The volume is then mounted to the host and into the Pod.
 
 - The volume is then mounted to the host and into the Pod.
 
@@ -4438,7 +6932,293 @@ spec:
     - name: mypd
       persistentVolumeClaim:
         claimName: myclaim
+
+
+A Note on Namespaces
+-------------------------------------
+- PersistentVolumes binds are exclusive, and since PersistentVolumeClaims are namespaced objects, mounting claims with "Many" modes (ROX, RWX) is only possible within one namespace
+
+
+
+Storage Object in Use Protection 
+------------------------------------
+- The purpose of the Storage Object in Use Protection feature is to ensure that PersistentVolumeClaims (PVCs) in active use by a Pod and PersistentVolume (PVs) that are bound to PVCs are not removed from the system, as this may result in data loss.
+
+- PVC is in active use by a Pod when a Pod object exists that is using the PVC.
+
+- If a user deletes a PVC in active use by a Pod, the PVC is not removed immediately. PVC removal is postponed until the PVC is no longer actively used by any Pods. Also, if an admin deletes a PV that is bound to a PVC, the PV is not removed immediately. PV removal is postponed until the PV is no longer bound to a PVC.
+
+- *** Incase we try to delete a pvc while the same pvc is being used in a pod, the "kubectl delete pvc" command will be in terminating state.
+$ kubectl delete pvc claim-log-1
+persistentvolumeclaim "claim-log-1" deleted
+
+$ kubectl get pvc
+NAME          STATUS        VOLUME   CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+claim-log-1   Terminating   pv-log   100Mi      RWX                           10m
+
+
+
+
+Reclaiming
+--------------------------------------
+- When a user is done with their volume, they can delete the PVC objects from the API that allows reclamation of the resource. The reclaim policy for a PersistentVolume tells the cluster what to do with the volume after it has been released of its claim. 
+
+- Currently, volumes can either be Retained (default), Recycled, or Deleted
+
+- Retain
+	- The Retain reclaim policy allows for manual reclamation of the resource. When the PersistentVolumeClaim is deleted, the PersistentVolume still exists and the volume is considered "released". But it is not yet available for another claim because the previous claimant's data remains on the volume. An administrator can manually reclaim the volume with the following steps.
+		- Delete the PersistentVolume. The associated storage asset in external infrastructure (such as an AWS EBS, GCE PD, Azure Disk, or Cinder volume) still exists after the PV is deleted.
+		- Manually clean up the data on the associated storage asset accordingly.
+		- Manually delete the associated storage asset.
 		
+	- If you want to reuse the same storage asset, create a new PersistentVolume with the same storage asset definition
+	
+- Delete 
+	- For volume plugins that support the Delete reclaim policy, deletion removes both the PersistentVolume object from Kubernetes, as well as the associated storage asset in the external infrastructure, such as an AWS EBS, GCE PD, Azure Disk, or Cinder volume. 
+
+- Recycle
+	- Warning: The Recycle reclaim policy is deprecated. Instead, the recommended approach is to use dynamic provisioning.
+	- If supported by the underlying volume plugin, the Recycle reclaim policy performs a basic scrub (rm -rf /thevolume/*) on the volume and makes it available again for a new claim.
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv0003
+spec:
+  capacity:
+    storage: 5Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Recycle
+
+
+
+Reserving a PersistentVolume
+---------------------------------------
+- The control plane can bind PersistentVolumeClaims to matching PersistentVolumes in the cluster. However, if you want a PVC to bind to a specific PV, you need to pre-bind them.
+
+- If other PersistentVolumeClaims could use the PV that you specify, you first need to reserve that storage volume. Specify the relevant PersistentVolumeClaim in the claimRef field of the PV so that other PVCs can not bind to it.
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: foo-pv
+spec:
+  storageClassName: ""
+  claimRef:
+    name: foo-pvc
+    namespace: foo
+  ...
+  
+- *** This is useful if you want to consume PersistentVolumes that have their claimPolicy set to Retain, including cases where you are reusing an existing PV
+
+
+Volume Mode 
+-----------------------------------------
+- Kubernetes supports two volumeModes of PersistentVolumes: Filesystem and Block.
+
+- volumeMode is an optional API parameter. Filesystem is the default mode
+
+- A volume with volumeMode: Filesystem is mounted into Pods into a directory. If the volume is backed by a block device and the device is empty, Kubernetes creates a filesystem on the device before mounting it for the first time.
+
+- You can set the value of volumeMode to Block to use a volume as a raw block device. Such volume is presented into a Pod as a block device, without any filesystem on it. This mode is useful to provide a Pod the fastest possible way to access a volume, without any filesystem layer between the Pod and the volume. . the application running in the Pod must know how to handle a raw block device. 		
+
+
+end to end life cycle:
+---------------------------
+- Create a PersistentVolume 
+
+pv-volume.yaml
+--------------
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: task-pv-volume
+  labels:
+    type: local
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data"
+
+
+- The configuration file specifies that the volume is at /mnt/data on the cluster's Node. The configuration also specifies a size of 10 gibibytes and an access mode of ReadWriteOnce, which means the volume can be mounted as read-write by a single Node. It defines the StorageClass name manual for the PersistentVolume, which will be used to bind PersistentVolumeClaim requests to this PersistentVolume.
+
+$ kubectl apply -f pv-volume.yaml
+
+$ kubectl get pv task-pv-volume
+
+NAME             CAPACITY   ACCESSMODES   RECLAIMPOLICY   STATUS      CLAIM     STORAGECLASS   REASON    AGE
+task-pv-volume   10Gi       RWO           Retain          Available             manual                   4s
+
+
+
+- Create a PersistentVolumeClaim 
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: task-pv-claim
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 3Gi
+
+
+$ kubectl apply -f pv-claim.yaml
+
+$ kubectl get pv task-pv-volume
+
+NAME             CAPACITY   ACCESSMODES   RECLAIMPOLICY   STATUS    CLAIM                   STORAGECLASS   REASON    AGE
+task-pv-volume   10Gi       RWO           Retain          Bound     default/task-pv-claim   manual                   2m
+
+
+$ kubectl get pvc task-pv-claim
+
+NAME            STATUS    VOLUME           CAPACITY   ACCESSMODES   STORAGECLASS   AGE
+task-pv-claim   Bound     task-pv-volume   10Gi       RWO           manual         30s
+
+
+
+- Create a Pod
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: task-pv-pod
+spec:
+  volumes:
+    - name: task-pv-storage
+      persistentVolumeClaim:
+        claimName: task-pv-claim
+  containers:
+    - name: task-pv-container
+      image: nginx
+      ports:
+        - containerPort: 80
+          name: "http-server"
+      volumeMounts:
+        - mountPath: "/usr/share/nginx/html"
+          name: task-pv-storage
+
+
+$ kubectl apply -f pv-pod.yaml
+
+$ kubectl get pod task-pv-pod
+
+$ kubectl exec -it task-pv-pod -- /bin/bash
+
+- In your shell, verify that nginx is serving the index.html file from the hostPath volume:
+
+# Be sure to run these 3 commands inside the root shell that comes from
+# running "kubectl exec" in the previous step
+apt update
+apt install curl
+curl http://localhost/
+
+
+The output shows the text that you wrote to the index.html file on the hostPath volume:
+
+Hello from Kubernetes storage
+
+
+- Clean up
+
+kubectl delete pod task-pv-pod
+kubectl delete pvc task-pv-claim
+kubectl delete pv task-pv-volume
+
+
+open a new shell the same way that you did earlier.
+
+In the shell on your Node, remove the file and directory that you created:
+
+# This assumes that your Node uses "sudo" to run commands
+# as the superuser
+sudo rm /mnt/data/index.html
+sudo rmdir /mnt/data
+
+
+Mounting the same persistentVolume in two places
+----------------------------------------------------
+
+- Using subPath
+
+Sometimes, it is useful to share one volume for multiple uses in a single pod. The volumeMounts.subPath property specifies a sub-path inside the referenced volume instead of its root.
+
+
+pv-duplicate.yaml
+------------------
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test
+spec:
+  containers:
+    - name: test
+      image: nginx
+      volumeMounts:
+        # a mount for site-data
+        - name: config
+          mountPath: /usr/share/nginx/html
+          subPath: html
+        # another mount for nginx config
+        - name: config
+          mountPath: /etc/nginx/nginx.conf
+          subPath: nginx.conf
+  volumes:
+    - name: config
+      persistentVolumeClaim:
+        claimName: test-nfs-claim
+
+
+mysql-duplicate.yaml
+----------------------
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-lamp-site
+spec:
+    containers:
+    - name: mysql
+      image: mysql
+      env:
+      - name: MYSQL_ROOT_PASSWORD
+        value: "rootpasswd"
+      volumeMounts:
+      - mountPath: /var/lib/mysql
+        name: site-data
+        subPath: mysql
+    - name: php
+      image: php:7.0-apache
+      volumeMounts:
+      - mountPath: /var/www/html
+        name: site-data
+        subPath: html
+    volumes:
+    - name: site-data
+      persistentVolumeClaim:
+        claimName: my-lamp-site-data
+
+
+- The PHP application's code and assets map to the volume's html folder and the MySQL database is stored in the volume's mysql folder.
+
+- using subPath, it creates 2 separate folder under the same volume and then these folders can be mapped to corresponding mountPaths to containers
+
+- You can perform 2 volume mounts on your nginx container:
+
+/usr/share/nginx/html for the static website /etc/nginx/nginx.conf for the default config
+
+
+
 
 Exercise:
 -----------------------------------
@@ -4532,14 +7312,16 @@ NAME          STATUS    VOLUME   CAPACITY   ACCESS MODES   STORAGECLASS   AGE
 claim-log-1   Pending                                                     6s
 
 
-- since the access mode is dofferent between pv vs pvc, the pvc will stay in pending state.
+- since the access mode is different between pv vs pvc, the pvc will stay in pending state.
+
+- changing the accessModes will result in binding the pvc to pv even if the sixe of pv is larger than pvc.
 $ kubectl get pvc
 NAME          STATUS   VOLUME   CAPACITY   ACCESS MODES   STORAGECLASS   AGE
 claim-log-1   Bound    pv-log   100Mi      RWX                           6s
 
 
 
-- Incase we try to delete a pvc while the same pvc is being used in a pod, the "kubectl delete pvc" command will be in terminating state.
+- *** Incase we try to delete a pvc while the same pvc is being used in a pod, the "kubectl delete pvc" command will be in terminating state.
 $ kubectl delete pvc claim-log-1
 persistentvolumeclaim "claim-log-1" deleted
 
@@ -4547,22 +7329,141 @@ $ kubectl get pvc
 NAME          STATUS        VOLUME   CAPACITY   ACCESS MODES   STORAGECLASS   AGE
 claim-log-1   Terminating   pv-log   100Mi      RWX                           10m
 
+
+
 - deleting the pod will result in deleting the pvc
 $ kubectl delete pod webapp 
 pod "webapp" deleted
 
+
 $ kubectl get pvc
 No resources found in default namespace.
+
 
 $ kubectl get pv
 NAME     CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS     CLAIM                 STORAGECLASS   REASON   AGE
 pv-log   100Mi      RWX            Retain           Released   default/claim-log-1                           33m
 
 
-=================================================================
+
+
+CloudAcademy Exercise:
+--------------------------
+# Create namespace
+kubectl create namespace persistence
+# Set namespace as the default for the current context
+kubectl config set-context $(kubectl config current-context) --namespace=persistence
+
+1. Create a PVC:
+
+cat << 'EOF' > pvc.yaml
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: db-data
+spec:
+  # Only one node can mount the volume in Read/Write
+  # mode at a time
+  accessModes:
+  - ReadWriteOnce 
+  resources:
+    requests:
+      storage: 2Gi
+EOF
+kubectl create -f pvc.yaml
+
+
+$ kubectl get pvc
+
+NAME      STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+db-data   Bound    pvc-4fc248a1-4010-4a74-ada3-9f43184b7ddc   2Gi        RWO            gp2            57s
+
+
+
+
+- Similar information is displayed. There is a RECLAIM POLICY associated with the PV. The Delete policy means the PV is deleted once the PVC is deleted. It is also possible to keep the PV using other reclaim policies.
+
+$ kubectl get pv
+
+NAME                                       CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM                 STORAGECLASS   REASON   AGE
+pvc-4fc248a1-4010-4a74-ada3-9f43184b7ddc   2Gi        RWO            Delete           Bound    persistence/db-data   gp2                     59s
+
+
+2. Create a Pod that mounts the volume provided by the PVC:
+
+cat << 'EOF' > db.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: db 
+spec:
+  containers:
+  - image: mongo:4.0.6
+    name: mongodb
+    # Mount as volume 
+    volumeMounts:
+    - name: data
+      mountPath: /data/db
+    ports:
+    - containerPort: 27017
+      protocol: TCP
+  volumes:
+  - name: data
+    # Declare the PVC to use for the volume
+    persistentVolumeClaim:
+      claimName: db-data
+EOF
+kubectl create -f db.yaml
+
+
+- The Pod uses the MongoDB image, which is a NoSQL database that stores its database files at /data/db by default. The PVC is mounted as a volume at that path causing the database files to be written to the EBS Persistent volume.
+
+
+3. Run the MongoDB CLI client to insert a document that contains the message "I was here" into a test database and then confirm it was inserted:
+
+kubectl exec db -it -- mongo testdb --quiet --eval \
+  'db.messages.insert({"message": "I was here"}); db.messages.findOne().message'
+
+I was here
+
+
+$ kubectl exec db -it -- mongo testdb --quiet --eval   'db.messages.findOne()'
+{ "_id" : ObjectId("62158b352c7eea3d6494aa0e"), "message" : "I was here" }
+
+
+4. Delete the Pod:  
+- At this point, a regular (emptyDir) volume would be destroyed and the database files would be lost.
+
+kubectl delete -f db.yaml
+
+5. Create a new database Pod:
+- Although the Pod is new, the Pod's spec refers to the same PVC as before.
+
+
+6. Attempt to find a document in the test database:
+
+$ kubectl exec db -it -- mongo testdb --quiet --eval 'db.messages.findOne()'
+{ "_id" : ObjectId("62158b352c7eea3d6494aa0e"), "message" : "I was here" }
+
+
+
+
+
+  
+  
+  
+
+
+
+
+=========================================================================================
+
 Storage Classes
-=================================================================
-before this, we know, how to create PV and then claim that PV using PVC (gets bound based on requested size and accessMode) and finally use the PVC in POD as volumes.
+
+=========================================================================================
+- A StorageClass provides a way for administrators to describe the "classes" of storage they offer. Different classes might map to quality-of-service levels, or to backup policies, or to arbitrary policies determined by the cluster administrators. Kubernetes itself is unopinionated about what classes represent. This concept is sometimes called "profiles" in other storage systems
+
+- before this, we know, how to create PV and then claim that PV using PVC (gets bound based on requested size and accessMode) and finally use the PVC in POD as volumes.
 
 in this case the problem is before creating the PV, we must have to create the disk on the cloud providers (ex: gcp)
 
@@ -4588,9 +7489,23 @@ spec:
 
 - Dynamic Provisioning: Nice if the PV get automatically created as and when an application requires it. With Storage Class object, we can define a provisioner such as Google storage (kubernetes.io/gce-pd), AWS-EBS (kubernetes.io/aws-ebs) that can automatically provision new storage on google cloud and attach that to the POD when a claim is made.
 
+
 - create a Storage class object, multiple available parameters based on the selected provisioner.
 
-sc-definition.yaml
+- Each StorageClass contains the fields provisioner, parameters, and reclaimPolicy, which are used when a PersistentVolume belonging to the class needs to be dynamically provisioned.
+
+	- Reclaim Policy: PersistentVolumes that are dynamically created by a StorageClass will have the reclaim policy specified in the reclaimPolicy field of the class, which can be either Delete or Retain. If no reclaimPolicy is specified when a StorageClass object is created, it will default to Delete.
+	
+	- Provisioner: Each StorageClass has a provisioner that determines what volume plugin is used for provisioning PVs. This field must be specified.
+	
+	- Allow Volume Expansion: PersistentVolumes can be configured to be expandable. This feature when set to true.
+	
+	- Volume Binding Mode: The volumeBindingMode field controls when volume binding and dynamic provisioning should occur. When unset, "Immediate" mode is used by default.
+		- The "Immediate" mode indicates that volume binding and dynamic provisioning occurs once the PersistentVolumeClaim is created.
+		- "WaitForFirstConsumer" mode which will delay the binding and provisioning of a PersistentVolume until a Pod using the PersistentVolumeClaim is created.
+
+
+sc-definition1.yaml
 --------------------
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
@@ -4601,7 +7516,24 @@ parameters:
   type: pd-standard // or pd-ssd
   replication-type: none // or regional-pd
 	
-	
+
+sc-definition2.yaml
+--------------------	
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: standard
+provisioner: kubernetes.io/aws-ebs
+parameters:
+  type: gp2
+reclaimPolicy: Retain
+allowVolumeExpansion: true
+mountOptions:
+  - debug
+volumeBindingMode: Immediate
+
+
+
 - we no longer need a PV definition as the PV and any associated storage is going to be created automatically when the storage class is created. 
 	
 - for the PVC to use the Storage Class we defined, we use the storage class name. thats how the PVC knows which storage class to use.
@@ -4620,7 +7552,7 @@ spec:
     requests:
       storage: 500Mi
 
-- With PVC created, the Storage Class associated with it used the defined provisioner to provision a new disk with the required size on GCP, and creates a persistent volume automatically and then binds the PVC to the Volume defined in POD definition.
+- With PVC created, the Storage Class associated with it use the defined provisioner to provision a new disk with the exact required size on GCP, and creates a persistent volume automatically and then binds the PVC to the Volume defined in POD definition.
 
 - It still creates a PV but we dont manually create anymore. its created by the Storage Class.
 
@@ -4658,7 +7590,7 @@ sc-platinum-definition.yaml
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-  name: silver
+  name: platinum
 provisioner: kubernetes.io/gce-pd
 parameters:
   type: pd-ssd
@@ -4727,9 +7659,11 @@ volumeBindingMode: WaitForFirstConsumer
 
 
 
-=============================================================================
+=======================================================================================
+
 Stateful Sets
-=============================================================================
+
+=======================================================================================
 
 - why we need stateful states and why cant we leave with deployments.
 
@@ -4823,7 +7757,7 @@ podManagementPolicy: parallel to deploy all pods in parallel.
 
 Headless Services
 ---------------------------------------------------------------
-- when we crate a StatefulSet, it deploys one pod at a time, each pod gets an ordinal index and each pod has a stable unique name (ex: mysql-0, mysql-1 and mysql-2), so we can point slaves to reach the master as mysql-0
+- when we create a StatefulSet, it deploys one pod at a time, each pod gets an ordinal index and each pod has a stable unique name (ex: mysql-0, mysql-1 and mysql-2), so we can point slaves to reach the master as mysql-0
 
 - Regular service: the way we point an application to another application withing the cluster is through a service. ex: if we have a webserver then to make a db server acsessible, we create a service for the mysql db. this service will now acts like a load balancer, the trafic in to the service is balanced across all the pods (mysql-0, mysql-1, mysql-2) in the deployment.
 	- service has a clusterIP and a DNS name (mysql.default.svc.cluster.local i.e. <service_name>.<ns_name>.<svc>.cluster.local)
@@ -4832,12 +7766,22 @@ Headless Services
 	
 - ways to reach a single pod of a deployment:
 	- pod IP (ex: 10.40.2.8) but IP address are dynamic can change if the pod gets recreated.
-	- each pod can be reached to its DNS address but the POD's dns is create using its IP address like: 10-40-2-8.default.pod.cluster.local
+	- each pod can be reached to its DNS address but the POD's dns is create using its IP address like: 10-40-2-8.default.pod.cluster.local i.e. <pod_ip_separated_by_hyphen>.<namespace>.pod.cluster.local
 	
-- Headless Service:
+	
+Headless Service:
+-----------------------------------------
+
+	- Sometimes you don't need load-balancing and a single Service IP. In this case, you can create what are termed "headless" Services, by explicitly specifying "None" for the cluster IP (.spec.clusterIP).
+	
+	- For headless Services, a cluster IP is not allocated, kube-proxy does not handle these Services, and there is no load balancing or proxying done by the platform for them. How DNS is automatically configured depends on whether the Service has selectors defined
+	
+	- With selectors: For headless Services that define selectors, the endpoints controller creates Endpoints records in the API, and modifies the DNS configuration to return A records (IP addresses) that point directly to the Pods backing the Service
+	
 	- does not load balance the request but creates individual DNS entries for each pod the service is pointing to, using the pod name and the sub domain.
+	
 	- its created like a normal service but it does not have an IP address on its own like a clusterIP for normal service.
-	- on creating a headless service named: mysql-h, each pod gets an DNS name in the format of: <podname>.<headless-servicename>.<namespace>.svc.<cluster-domain>
+	- on creating a headless service named: mysql-h, each pod gets an DNS name in the format of: <podname>.<headless-servicename>.<namespace>.svc.<cluster-domain-name>
 	
 	ex:
 	mysql-0.mysql-h.default.svc.cluster.local
@@ -4848,6 +7792,8 @@ Headless Services
 	
 	- create headless service by explicitly specifying "None" for the cluster IP (.spec.clusterIP).
 	
+	- "Headless" (without a cluster IP) Services are also assigned a DNS A or AAAA record, depending on the IP family of the service, for a name of the form my-svc.my-namespace.svc.cluster-domain.example. Unlike normal Services, this resolves to the set of IPs of the pods selected by the Service. Clients are expected to consume the set or else use standard round-robin selection from the set.
+	
 headless-service.yaml
 ---------------------
 apiVersion: v1
@@ -4855,7 +7801,7 @@ kind: Service
 metadata:
   name: mysql-h
 spec:
-  type: None
+  clusterIP: None
   
   ports:
       # By default the `targetPort` is set to the same value as the `port` field.
@@ -4866,8 +7812,8 @@ spec:
 	
 
 - Now the DNS entries are created for the pod only if the 2 conditions are met. under the spec section, 2 optional field, subdomain and hostname
-	- on adding the subdomain value to the headless service name, it creates a a DNS record (mysql-h.default.svc.cluster.local) for the name of the service to point to the pod.
-	- how its still does not create A record for invidual pods. giving a name to hostname field in pod manifest, it creates DNS record with the Pod name (mysql-pod.mysql-h.default.svc.cluster.local)
+	- on adding the subdomain value to the headless service name, it creates a DNS A-record (mysql-h.default.svc.cluster.local) for the name of the service to point to the pod.
+	- how its still does not create A record for invidual pods. giving a name to hostname and subdomain field in pod manifest, it creates DNS record with the Pod name (mysql-pod.mysql-h.default.svc.cluster.local)
 	
 pod-definition.yaml
 ----------------------
@@ -4885,6 +7831,8 @@ spec:
   subdomain: mysql-h  // MUST be the same name of headless service
   hostname: mysql-pod // any name, gets prefixed on pod DNS name created by the headless service.
   
+
+- without hostname/subdomain, each pod can be reached to its DNS address but the POD's dns is created using its IP address like: 10-40-2-8.default.pod.cluster.local
 
 - Now when we deploy pod using deployment, by default it does not add a hostname/subdomain to the pod if hostname or subdomain is not defined, so the headless service too does not create A record for the pods.
 
@@ -4958,9 +7906,9 @@ spec:
 
 - all pods now get a separate DNS record.
 
-mysql-pod.mysql-h.default.svc.cluster.local
-mysql-pod.mysql-h.default.svc.cluster.local
-mysql-pod.mysql-h.default.svc.cluster.local	
+mysql-0.mysql-h.default.svc.cluster.local
+mysql-1.mysql-h.default.svc.cluster.local
+mysql-2.mysql-h.default.svc.cluster.local	
 
 
 
@@ -5047,6 +7995,97 @@ spec:
 
 
 
+
+===============================================================================================
+
+DNS for Services and Pods
+
+===============================================================================================
+- Kubernetes creates DNS records for services and pods. You can contact services with consistent DNS names instead of IP addresses
+
+
+Services
+----------
+A/AAAA records
+"Normal" (not headless) Services are assigned a DNS A or AAAA record, depending on the IP family of the service, for a name of the form my-svc.my-namespace.svc.cluster-domain.example. This resolves to the cluster IP of the Service.
+
+"Headless" (without a cluster IP) Services are also assigned a DNS A or AAAA record, depending on the IP family of the service, for a name of the form my-svc.my-namespace.svc.cluster-domain.example. Unlike normal Services, this resolves to the set of IPs of the pods selected by the Service. Clients are expected to consume the set or else use standard round-robin selection from the set
+
+
+
+Pods
+----------
+A/AAAA records
+In general a pod has the following DNS resolution:
+
+pod-ip-address.my-namespace.pod.cluster-domain.example.
+
+For example, if a pod in the default namespace has the IP address 172.17.0.3, and the domain name for your cluster is cluster.local, then the Pod has a DNS name:
+
+172-17-0-3.default.pod.cluster.local.
+
+Any pods exposed by a Service have the following DNS resolution available:
+
+pod-ip-address.service-name.my-namespace.svc.cluster-domain.example
+
+
+
+Pod's hostname and subdomain fields
+---------------------------------------
+Currently when a pod is created, its hostname is the Pod's metadata.name value.
+
+The Pod spec has an optional hostname field, which can be used to specify the Pod's hostname. When specified, it takes precedence over the Pod's name to be the hostname of the pod. For example, given a Pod with hostname set to "my-host", the Pod will have its hostname set to "my-host".
+
+The Pod spec also has an optional subdomain field which can be used to specify its subdomain. For example, a Pod with hostname set to "foo", and subdomain set to "bar", in namespace "my-namespace", will have the fully qualified domain name (FQDN) "foo.bar.my-namespace.svc.cluster-domain.example".
+
+Example:
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: default-subdomain
+spec:
+  selector:
+    name: busybox
+  clusterIP: None
+  ports:
+  - name: foo # Actually, no port is needed.
+    port: 1234
+    targetPort: 1234
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: busybox1
+  labels:
+    name: busybox
+spec:
+  hostname: busybox-1
+  subdomain: default-subdomain
+  containers:
+  - image: busybox:1.28
+    command:
+      - sleep
+      - "3600"
+    name: busybox
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: busybox2
+  labels:
+    name: busybox
+spec:
+  hostname: busybox-2
+  subdomain: default-subdomain
+  containers:
+  - image: busybox:1.28
+    command:
+      - sleep
+      - "3600"
+    name: busybox
+	
+If there exists a headless service in the same namespace as the pod and with the same name as the subdomain, the cluster's DNS Server also returns an A or AAAA record for the Pod's fully qualified hostname. For example, given a Pod with the hostname set to "busybox-1" and the subdomain set to "default-subdomain", and a headless Service named "default-subdomain" in the same namespace, the pod will see its own FQDN as "busybox-1.default-subdomain.my-namespace.svc.cluster-domain.example". DNS serves an A or AAAA record at that name, pointing to the Pod's IP. Both pods "busybox1" and "busybox2" can have their distinct A or AAAA records.
 
 
 
@@ -5346,8 +8385,13 @@ Authorization:
 
 
 
+
+===================================================================================================
+
 Authentication in Kubernetes cluster
-===================================================================================
+
+===================================================================================================
+
 - There are 4 types of users who access the kubernetes cluster.
 	- Admins: access clsuter to perform admin tasks.
 	- Developers: to test or deploy application
@@ -5417,8 +8461,13 @@ curl https://<kube-master-node-ip>:6443/api/v1/pods \
 
 
 
+
+======================================================================================================
+
 Security - KubeConfig
-==============================================================================
+
+======================================================================================================
+
 - so far we have seen, user access kubernets using direct kube API via certificate authN:
 
 ex: 
@@ -5458,7 +8507,7 @@ kubectl get pods --kubeconfig my-kube-config     // if my-kube-config is kept in
 
 KubeConfig file structure ($HOME/.kube/config)
 ------------------------------------------------
-- the file has 3 sections and its an yaml file. each of these are accept array to specify multiple clusters/users/contexts
+- the file has 3 sections and its an yaml file. each of these accept array to specify multiple clusters/users/contexts
 	
 	- Clusters: various k8s cluster that we need access to. i.e. "--server kube-master:6443" goes this section.
 	
@@ -5549,6 +8598,10 @@ kubectl command to view/edit KubeConfig file
 > kubectl config set-context development@frontend --cluster=development --namespace=frontend --user=developer
 > kubectl config set-context development@storage --cluster=development --namespace=storage --user=developer
 > kubectl config --kubeconfig=config-demo set-context experimenter@scratch --cluster=scratch --namespace=default --user=experimenter
+
+
+- setting namespace to current context is option which can also be set later. set namespace to current-context to avoid passing -n for every kubectl
+$ kubectl config set-context --current --namespace=<namespace_name>
 
 
 - Use a specific context
@@ -5728,6 +8781,21 @@ users:
     client-key: /etc/kubernetes/pki/users/aws-user/aws-user.key
 
 
+
+- in case the ser cred are setp using auth-providers, the config looks like below:
+
+users:
+- name: oidc
+  auth-provider:
+    config:
+	  client-id: <>
+	  client-secret: <>
+	  id-token: <>
+	  refresh-token: <>
+	  idp_issuer_url: <>
+
+
+
 -- use the dev-user to access test-cluster-1. Set the current context to the right one
 
 $ kubectl config --kubeconfig=my-kube-config set-context dev-user@test-cluster-1 --cluster=test-cluster-1 --user=dev-user
@@ -5750,8 +8818,14 @@ dev-user@test-cluster-1
 
 
 
+
+
+==============================================================================================
+
 Authorization
-==================================================================
+
+==============================================================================================
+
 - once a user human (admins/developers) or system (bots via service accounts) users gain access to the kubernetes cluster, controlling what they can do is managed by AuthZ.
 
 - Admin user have super access to the cluster like view objcets, create objects and even adding/delete nodes to the cluster. but there are other users like developres, testers, monitorring 3rd party apps.
@@ -5760,7 +8834,7 @@ Authorization
 
 - similary, for service account, very minimal level of access to perform specific operation like viewing certain type of cluster metrics or healths stats and not viewing any other objects like pods,services,deployments etc.
 
-- AuthZ cal also help in applying restriction rules for certain user to have access to only their namepsace and not any other namespace used by other teams in a shared cluster.
+- AuthZ can also help in applying restriction rules for certain user to have access to only their namepsace and not any other namespace used by other teams in a shared cluster.
 
 
 AuthZ Mechanism
@@ -5933,8 +9007,13 @@ Events:            <none>
 
 
 
+
+============================================================================================
+
 Role Based Access Controls
-=========================================================================
+
+============================================================================================
+
 https://kubernetes.io/docs/reference/access-authn-authz/rbac/
 
 Role and ClusterRole object
@@ -5943,7 +9022,7 @@ Role and ClusterRole object
 - Role: A Role always sets permissions within a particular namespace; when you create a Role, you have to specify the namespace it belongs in.
 - ClusterRole: ClusterRole, by contrast, is a non-namespaced resource. The resources have different names (Role and ClusterRole) because a Kubernetes object always has to be either namespaced or not namespaced; it can't be both.
 
-- Role and RoleBinding (to asscociate user to Role) are namespaced i.e. they are created on a specific namespace. if namespace is not provided it will created in default namespace. Hence it controls access within that namespace alone.
+- Role and RoleBinding (to asscociate user to Role) are namespaced i.e. they are created on a specific namespace. if namespace is not provided it will be created in default namespace. Hence it controls access within that namespace alone.
 
 - Role and RoleBinding (to asscociate user to Role) are used to authorize namespaced resources.
 
@@ -6185,8 +9264,14 @@ no
 
 
 
+
+
+=============================================================================================================
+
 Cluster Roles
-======================================================================================
+
+=============================================================================================================
+
 - we now know about Role and RoleBinding.
 
 - cluster scoped resources are those where we dont specify namespace like nodes, PV, clusterrole,clusterrolebindings, namespaces etc.
@@ -6251,8 +9336,13 @@ $ kubectl create -f cluster-admin-role-binding.yaml
 
 
 
-Admission Controllers
+
 ===================================================================================
+
+Admission Controllers
+
+===================================================================================
+
 - everytime we run a command using kubectl utility, it sends the request (say create a pod), it goes to kube-apiserver and then the pod gets created, and this info is finally persisted in etcd database.
 
 - when the request hits the kube-apiserver, it goes through an Authentication process and this usually done through certificates. if the request is submitted via kubectl utility, it uses the creds/certs defined in $HOME/.kube/config file. The AuthN process is responsible to indentify the request, and makes sure the user is valid.
@@ -6272,7 +9362,7 @@ when a pod creation request comes in, we would like to review the config file an
 OR enforce, we must never use the latest tag for images.
 2/ do not permit runAs root user.
 3/ only permit certain capabilities only. in this case adding "MAC_ADMIN" capabilities should not be allowed.
-4/ ensure metadat section always contains labels.
+4/ ensure metadata section always contains labels.
 
 web-pod.yaml
 -------------
@@ -6300,7 +9390,7 @@ spec:
 	- DefaultStorageClass: observes creation of PVC and automatically adds a default storage class to them if one is not specified. 
 	- EventRateLimit: set a limit that the kube-apiserver can handle at a time and prevent apiserver from flooding multiple request.
 	- NamespaceAutoProvision: disabled by default. it automatically creates the namespace if it does not exists. 
-	- NamespaceExists: rejects request to create on namespace that do not exists. enabled bydefault.
+	- NamespaceExists: rejects request to create any objects on a namespace if the namepsace does not exist. enabled bydefault.
 
 
 NamespaceExists Admission Controller
@@ -6311,7 +9401,7 @@ NamespaceExists Admission Controller
 
 > kubectl run nginx --image nginx --namespace blue
 
-- here this request gets authenticated and then authorized and it then goes though the built-in admission controllers. the "NamespaceExists" admission controllers handles the request and checks if the blue namespace is available, if it is not then the request gets rejected. 
+- here this request gets authenticated and then authorized and it then goes though the built-in admission controllers. the "NamespaceExists" admission controllers handles the request and checks if the blue namespace exists, if it is not then the request gets rejected. 
 
 - the "NamespaceExists" is built-in admission controller that is enabled by default.
 
@@ -6377,7 +9467,7 @@ Validating and Mutating Admission Controllers
 	- Validating Admission Controllers: those that can validate the request and then allow/deny.
 	- Mutating Admission Controllers: change the incoming request itself before its created.
 
-- the "NamespaceExists" is built-in admission controller, helps validating if the namespace exists and rejects the request f it does not exists. this is known as a validating admission controller. enabeld bydefault.
+- the "NamespaceExists" is built-in admission controller, helps validating if the namespace exists and rejects the request if it does not exists. this is known as a validating admission controller. enabeld by default.
 
 - the "DefaultStorageClass" built-in admission controller, intercepts any PVC creation request, checks if it has any StorageClass defined, if not, it will modify the definition and add a default Storage class. this is known as a Mutating admission controller. it can change the object itself before its created.
 
@@ -6780,9 +9870,12 @@ Error from server: error when creating "pod-with-conflict.yaml": admission webho
 
 
 
+================================================================================================
 
 API Groups
-===================================================================================
+
+================================================================================================
+
 - all operation performed on the kubernetes cluster is done by kube-apiserver via kubectl utility or directly via REST
 
 - The API group is specified in a REST path and in the apiVersion field of a serialized object.
@@ -7022,8 +10115,15 @@ kube proxy vs kubectl proxy
 
 
 
-API Versions
+
+
+
 ================================================================================
+
+API Versions
+
+================================================================================
+
 - Each api group have 3 types of versioning. Different API versions indicate different levels of stability and support.
 
 - Alpha
@@ -7139,8 +10239,13 @@ NOTE: one one version for preferred or Storage version, usually both of these ar
 
 
 
+
+=====================================================================================================
+
 API Deprecations
-===============================================================
+
+=====================================================================================================
+
 - along with kubernets own release version cycles every API groups also followes certain versioning.
 
 - a single API group can support multiple versions at a time, why do we need multiple versions and how many old versions we should support, when can we remove an older version that is no longer required -- all this is answered by API deprication policy.
@@ -7247,14 +10352,19 @@ root@controlplane:~# kubectl get po -n kube-system
 
 
 
+
+===============================================================================================
+
 Custom Resource Definition (CRD)
-=============================================================================
+
+===============================================================================================
+
 - Resource:
 	- when we create a resource say Deployment in yaml file, kubernetes creates a deployment object and stores its information in etcd datastore.
 	- we can list the deployment
 	- we can run the delete command to delete the deployment object.
 	- all of these going to add a create, list and delete info for the deployment object in etcd datastore. 
-	- Now, when a deployment object is created, ther Deployment Controller is responsible to create corresponding ReplicaSet objcet which in turn create the no. of pods defined.
+	- Now, when a deployment object is created, the corresponding Deployment Controller is responsible to create the ReplicaSet object which in turn create the no. of pods defined.
 	- Deployment controller is built-in that comes along with kubernetes.
 	
 - Resource Controller:
@@ -7291,7 +10401,7 @@ $ kubetcl delete -f flightticket.yaml
 - now we are going to need a controller (flightticket_controller.go), will watch for creating or updation of flight ticket resource, and on creation/deletetion of it, the controller contacts the https://book-flight.com/api to book or make necessary changes.
 
 	
-- Now, before we able to run the kubectl create command for this new custom resource, we need to regsuter that resource in kubernetes using Cistom Resource Definition.
+- Now, before we able to run the kubectl create command for this new custom resource, we need to register that resource in kubernetes using Custom Resource Definition.
 
 - Custom resources can appear and disappear in a running cluster through dynamic registration, and cluster admins can update custom resources independently of the cluster itself. 
 
@@ -7361,8 +10471,14 @@ $ kubectl create -f flightticker-crd-definition.yaml
 
 
 
-Custom Controllers
+
+
 ==========================================================================================
+
+Custom Controllers
+
+==========================================================================================
+
 - A custom controller is needed to keep monitoring the cluster for creation/updation of its custom resource type objects and take action accordingly. ex: book or cancel flight ticket using the booking api website.
 
 - a control loop is a non-terminating loop that regulates the state of a system.
@@ -7394,8 +10510,13 @@ Custom Controllers
 
 
 
+
+
+======================================================================================
+
 Deployment Strategy - Blue Green
-============================================================================
+
+======================================================================================
 
 Deployment Strategy
 -------------------
@@ -7414,7 +10535,7 @@ Other than these 2, there are few additional deployment strategies that we can n
 
 - Blue/Green is a deployment strategy where we have the new version deployed along side the old version. old version is called BLUE and new ver, is GREEN. 100% of the traffic is still routed to the old version, tests are run on new version, once all tests are passed, we switch traffic all at once from BLUE to GREEN.
 
-- best implemented using Service Mesh using Istio.
+- best implemented using Service Mesh with Istio.
 
 - can be implemented using native kubernetes deployments and services.
 
@@ -7458,7 +10579,7 @@ spec:
 
 myapp-deployment-green.yaml
 ---------------------------
-apiVresion: v1
+apiVersion: v1
 kind: Deployment
 metadata:
   name: myapp-green
@@ -7494,8 +10615,12 @@ spec:
 
 
 
+===============================================================================================
+
 Deployment Strategy - Canary
-==========================================================
+
+===============================================================================================
+
 - In this strategy we deploy a new version and route only a small percentage to it. the majority of traffic is being routed to the older version. at this we on test and if everything looks good, we upgrade the original deployment with the new version, we may use RollingUpdate to upgrade. then we get rid of the canary deployment.
 
 
@@ -7573,15 +10698,7 @@ spec:
 	  matchLabels:
 	    type: front-end
 		
-myapp-service.yaml
-------------------
-apiVersion: v1
-kind: Service
-metadata:
-  name: myapp-service
-spec:
-  selector:
-    app: front-end
+
 	
 
 - few kubetcl commands to scale down old ver. on primary deployment and scale up the new canary.
@@ -7939,8 +11056,99 @@ netpol	--------->		Network Policies
 pv		--------->		Persistent Volumes
 pvc		--------->		Persistent Volumes Claims
 sa 		--------->		Service accounts
+cm		--------->		ConfigMap
 
 
+
+===========================================================================
+K8S Labs
+------------
+
+$ watch kubectl get nodes
+
+
+- Load kubectl shell completions for your current shell session:
+With completions loaded, you can press tab to autocomplete or list available completions as you enter kubectl commands.
+
+$ source <(kubectl completion bash)
+
+
+
+- Use the explain command to get an explanation of a Pod's spec (press space to page through the output):
+$ kubectl explain Pod.spec | more
+$ kubectl explain <Resource_Kind>.<Path_To_Field>
+$ kubectl explain Pod.spec.containers.image
+
+
+$ kubectl get po --show-labels
+NAME             READY   STATUS    RESTARTS   AGE   LABELS
+blue-backend     1/1     Running   0          30s   color=blue,tier=backend
+green-frontend   1/1     Running   0          30s   color=green,tier=frontend
+red-backend      1/1     Running   0          30s   color=red,tier=backend
+red-frontend     1/1     Running   0          30s   color=red,tier=frontend
+
+
+$ kubectl get po -L color,tier
+NAME             READY   STATUS    RESTARTS   AGE   COLOR   TIER
+blue-backend     1/1     Running   0          62s   blue    backend
+green-frontend   1/1     Running   0          62s   green   frontend
+red-backend      1/1     Running   0          62s   red     backend
+red-frontend     1/1     Running   0          62s   red     frontend
+
+
+- Use the -l (or --selector) option to select all Pods with a color label:
+Specifying only a label key as a selector will select all resources with that label defined. 
+
+$ kubectl get pods -L color,tier -l color
+
+
+- Select all Pods that do not have a color label:
+$ kubectl get po -L color,tier -l '!color'
+No resources found in labels namespace.
+
+
+- Select all Pods that have the color red:
+
+$ kubectl get po --selector color=red
+NAME           READY   STATUS    RESTARTS   AGE
+red-backend    1/1     Running   0          4m50s
+red-frontend   1/1     Running   0          4m50s
+
+
+$ kubectl get po -l color=red
+NAME           READY   STATUS    RESTARTS   AGE
+red-backend    1/1     Running   0          5m4s
+red-frontend   1/1     Running   0          5m4s
+
+
+
+- Select all Pods that have the color red and are not in frontend tier:
+
+$ kubectl get po -L color,tier -l 'color=red,tier!=frontend'
+NAME          READY   STATUS    RESTARTS   AGE     COLOR   TIER
+red-backend   1/1     Running   0          8m32s   red     backend
+
+
+- Select all Pods with green or blue color:
+
+$ kubectl get po -L color,tier -l 'color in (blue,green)'
+NAME             READY   STATUS    RESTARTS   AGE   COLOR   TIER
+blue-backend     1/1     Running   0          10m   blue    backend
+green-frontend   1/1     Running   0          10m   green   frontend
+
+
+- Use the describe command to display the annotation for the red-frontend Pod:
+$ kubectl describe po red-frontend | grep Annotation
+Annotations:  Lab: Kubernetes Pod Design for Application Developers
+
+
+Remove the Pod's Lab annotation and verify it no longer exists:
+
+kubectl annotate pod red-frontend Lab- &&
+kubectl describe pod red-frontend | grep Annotations -A 2
+
+kubectl annotate --help
+kubectl label --help
 
 
 
