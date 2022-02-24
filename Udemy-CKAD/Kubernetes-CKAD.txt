@@ -423,8 +423,14 @@ ningx     1/1     Running   0          7m32s   10.44.0.1   node03   <none>      
 redis     1/1     Running   0          3m59s   10.36.0.1   node01   <none>           <none>
 
 
-namespace
-=======================================
+
+
+==============================================================================
+
+::Namespace::
+
+==============================================================================
+
 - kubernetes automatically creates a namespace during the cluster setup, known 'default' and all the objects gets created in it if not specified explicitly.
 
 - kubernetes also creates a set of pods and services for its internal purpose such as those required by its network solutions, DNS service etc, kubernets creates these interla objects in its own namespace (kube-system) to prevent from users accidentally deleting or modifying.
@@ -477,8 +483,61 @@ or
 
 
 
+$ kubectl get ns
+NAME                   STATUS   AGE
+default                Active   302d
+kube-node-lease        Active   302d
+kube-public            Active   302d
+kube-system            Active   302d
+kubernetes-dashboard   Active   302d
+
+
+- default: namespace is used when you schedule pods without declaring a specific namespace.
+
+- kube-system: namespace is where pods essential to the operation of the Kubernetes cluster live.
+
+- kubernetes-dashboard: contains the resources for a monitoring and graphical interface for managing the cluster.
+
+
+- List all of the pods in the kube-system namespace:
+
+$ kubectl get pod -n=kube-system 
+
+NAME                                                               READY   STATUS    RESTARTS   AGE
+calico-kube-controllers-69496d8b75-hcctr                           1/1     Running   1          302d
+calico-node-77h65                                                  1/1     Running   0          17m
+calico-node-lm56l                                                  1/1     Running   1          302d
+calico-node-wrhnf                                                  1/1     Running   0          17m
+coredns-74ff55c5b-h7f7t                                            1/1     Running   1          302d
+coredns-74ff55c5b-kk4cw                                            1/1     Running   1          302d
+etcd-ip-10-0-0-100.us-west-2.compute.internal                      1/1     Running   1          302d
+kube-apiserver-ip-10-0-0-100.us-west-2.compute.internal            1/1     Running   1          302d
+kube-controller-manager-ip-10-0-0-100.us-west-2.compute.internal   1/1     Running   1          302d
+kube-proxy-bzbcn                                                   1/1     Running   1          302d
+kube-proxy-hmz67                                                   1/1     Running   0          17m
+kube-proxy-rw46v                                                   1/1     Running   0          17m
+kube-scheduler-ip-10-0-0-100.us-west-2.compute.internal            1/1     Running   1          302d
+metrics-server-5986c4b4d6-7lg48                                    1/1     Running   1          302d
+
+
+- All of the components of the cluster are running in pods in the kube-system namespace:
+
+calico: The container network used to connect each node to every other node in the cluster. Calico also supports network policy. Calico is one of many possible container networks that can be used by Kubernetes.
+coredns: Provides DNS services to nodes in the cluster
+etcd: The primary data store of all cluster state
+kube-apiserver: The REST API server for managing the Kubernetes cluster
+kube-controller-manager: Manager of all of the controllers in the cluster that monitor and change the cluster state when necessary
+kube-proxy: Network proxy that runs on each node
+kube-scheduler: Control plane process which assigns Pods to Nodes
+metrics-server: Not an essential component of a Kubernetes cluster but it is used in this lab to provide metrics for viewing in the Kubernetes dashboard.
+
+
+
+
 ======================================================================================== 
-Resource Quota
+
+::Resource Quota::
+
 ========================================================================================
 https://kubernetes.io/docs/concepts/policy/resource-quotas/
 
@@ -6268,6 +6327,118 @@ Spec:
 
 
 
+CloudAcademy Exercise:
+------------------------
+1. Inspect the deny-metadata network policy in the default namespace.
+
+$ kubectl get networkpolicy deny-metadata -o yaml
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+spec:
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+        except:
+        - 169.254.169.254/32
+  podSelector: {}
+
+- The policyTypes list can include one or both of Egress and Ingress depending on what type of traffic the policy applies to.
+- In this case, only Egress is included, so the default ingress behavior of allowing all incoming traffic is not impacted
+- A corresponding egress key is defined. If no egress key was defined, the default behavior would be to block all egress traffic.
+
+- The egress policy whitelists all outgoing traffic (CIDR notation 0.0.0.0/0) except for the EC2 instance metadata IP address (CIDR notation 169.254.169.254/32). 
+
+
+2. Create a pod in the default namespace and run /bin/sh in it:
+
+$ kubectl run busybox --image=busybox --rm -it /bin/sh
+
+3. Use the wget command to connect to https://google.com:
+
+/ # wget https://google.com
+
+
+4. Attempt to connect to the EC2 instance metadata endpoint:
+
+/ # wget 169.254.169.254
+Connecting to 169.254.169.254 (169.254.169.254:80)
+
+
+
+5. Retry connecting to the EC2 instance metadata endpoint using a container in a different namespace:
+
+$ kubectl create namespace test
+$ kubectl run busybox --image=busybox --rm -it -n test /bin/sh
+
+/ # wget 169.254.169.254
+Connecting to 169.254.169.254 (169.254.169.254:80)
+saving to 'index.html'
+
+- This time the connection succeeds. The EC2 instance metadata endpoint can potentially be used by malicious containers to extract credentials and modify resources in your AWS account. That is why it is important to prevent access to the metadata endpoint.
+
+
+6. Create a network policy resource file that uses pod selectors to allow incoming connections to a web server application tier from a cache tier:
+
+cat > app-policy.yaml <<EOF
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: app-tiers
+  namespace: test
+spec:
+  podSelector:
+    matchLabels:
+      app-tier: web
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app-tier: cache
+    ports:
+    - port: 80
+EOF
+
+7. Create the network policy resource:
+
+$ kubectl create -f app-policy.yaml
+
+$ kubectl get netpol -n test
+NAME        POD-SELECTOR   AGE
+app-tiers   app-tier=web   2m22s
+
+
+8. Create an Nginx web server pod in the web server tier:
+
+$ kubectl run web-server -n test -l app-tier=web --image=nginx:1.15.1 --port 80
+
+
+9. Create a busybox pod with app-tier=cache as label to test the ingress network communication for the app-tiers pod:
+
+# Get the web server pod's IP address
+$ web_ip=$(kubectl get pod -n test -o jsonpath='{.items[0].status.podIP}')
+
+
+# Pass in the web server IP addpress as an environment variable
+$ kubectl run busybox -n test -l app-tier=cache --image=busybox --env="web_ip=$web_ip" --rm -it /bin/sh
+
+
+# Send a requst to the web server on port 80
+/ # wget $web_ip
+Connecting to 192.168.23.131 (192.168.23.131:80)
+saving to 'index.html'
+
+
+10. Repeat the test, but using a pod that is not in the cache tier:
+
+$ kubectl run busybox2 -n test -l app-tier=backend --image=busybox --env="web_ip=$web_ip"
+
+The request will never succeed.
 
 
 
@@ -6703,8 +6874,8 @@ EOF
 
 
 - List the contents of the volume on the Node that is running the Pod:
-- The volume starts empty but now has the tosses.txt file which logs the coin toss results for the Pod.
-- You will use kubectl exec to access the file in the coming instructions
+	- The volume starts empty but now has the tosses.txt file which logs the coin toss results for the Pod.
+	- You will use kubectl exec to access the file in the coming instructions
 
 pod_node=$(kubectl get pod coin-toss -o jsonpath='{.status.hostIP}')
 pod_id=$(kubectl get pod coin-toss -o jsonpath='{.metadata.uid}')
@@ -7661,9 +7832,12 @@ volumeBindingMode: WaitForFirstConsumer
 
 =======================================================================================
 
-Stateful Sets
+::StatefulSets::
 
 =======================================================================================
+
+Stateful applications are applications that have a memory of what happened in the past. Databases are an example of stateful applications. Kubernetes provides support for stateful applications through StatefulSets and related primitives.
+
 
 - why we need stateful states and why cant we leave with deployments.
 
@@ -7759,7 +7933,7 @@ Headless Services
 ---------------------------------------------------------------
 - when we create a StatefulSet, it deploys one pod at a time, each pod gets an ordinal index and each pod has a stable unique name (ex: mysql-0, mysql-1 and mysql-2), so we can point slaves to reach the master as mysql-0
 
-- Regular service: the way we point an application to another application withing the cluster is through a service. ex: if we have a webserver then to make a db server acsessible, we create a service for the mysql db. this service will now acts like a load balancer, the trafic in to the service is balanced across all the pods (mysql-0, mysql-1, mysql-2) in the deployment.
+- Regular service: the way we point an application to another application within the cluster is through a service. ex: if we have a webserver then to make a db server acsessible, we create a service for the mysql db. this service will now acts like a load balancer, the trafic in to the service is balanced across all the pods (mysql-0, mysql-1, mysql-2) in the deployment.
 	- service has a clusterIP and a DNS name (mysql.default.svc.cluster.local i.e. <service_name>.<ns_name>.<svc>.cluster.local)
 	- webserver running in same env, use this dns name to reach mysql db.
 	- BUT since this a master-slave topology. the reads could be serverd by both master or slaves BUT, writes has to be by master only. hence read request can still use the mysql clusterIP service but the write requests can't.
@@ -7801,7 +7975,7 @@ kind: Service
 metadata:
   name: mysql-h
 spec:
-  clusterIP: None
+  type: None
   
   ports:
       # By default the `targetPort` is set to the same value as the `port` field.
@@ -7992,6 +8166,655 @@ spec:
 	- then the 2nd POD gets created, it create a PVC, the StorageClass provisions a new volume, associates that to a PV and bind the PV to PVC
 	
 - Incase any of these POD gets recreated or reschedules on a separate node, StatedulSet DO NOT automatically delete the PVC or the associated volume, instead ensures, the POD is re-attached to the same PVC that it was attached to before. thus StatefulSets ensures, stable storage for PODs.
+
+
+
+CloudAcademy Exercise:
+---------------------------------------------------------------------
+This Lab will deploy a replicated MySQL database as a StatefulSet. MySQL is one of the most popular databases in the world. This Lab won't focus on the details specific to configuring MySQL. The focus is on the features of Kubernetes that allow a stateful application to be deployed. The Kubernetes community maintains a wide variety of stateful applications that are ready to deploy through Helm. Helm acts as a package manager for Kubernetes and can deploy entire applications to a cluster using templates called charts. A list of charts is available here. In addition to MySQL, there are charts for many other popular databases including MongoDB and PostgreSQL, as well as popular applications like WordPress and Joomla. The concepts illustrated in this Lab will help you understand the common elements used to deploy all of these stateful applications in Kubernetes.
+
+Background:
+
+ConfigMaps: A type of Kubernetes resource that is used to decouple configuration artifacts from image content to keep containerized applications portable. The configuration data is stored as key-value pairs.
+
+ 
+
+Headless Service: A headless service is a Kubernetes service resource that won't load balance behind a single service IP. Instead, a headless service returns a list of DNS records that point directly to the pods that back the service. A headless service is defined by declaring the clusterIP property in a service spec and setting the value to None. StatefulSets currently require a headless service to identify pods in the cluster network.
+
+ 
+
+Stateful Sets: Similar to Deployments in Kubernetes, StatefulSets manage the deployment and scaling of pods given a container spec.StatefulSets differ from Deployments in that the Pods in a stateful set are not interchangeable. Each pod in a StatefulSet has a persistent identifier that it maintains across any rescheduling. The pods in a StatefulSet are also ordered. This provides a guarantee that one pod can be created before following pods. In this Lab, this is useful for ensuring the MySQL primary is provisioned first.
+
+ 
+
+PersistentVolumes (PVs) and PersistentVolumeClaims (PVCs): PVs are Kubernetes resources that represent storage in the cluster. Unlike regular Volumes which exist only until while containing pod exists, PVs do not have a lifetime connected to a pod. Thus, they can be used by multiple pods over time, or even at the same time. Different types of storage can be used by PVs including NFS, iSCSI, and cloud-provided storage volumes, such as AWS EBS volumes. Pods claim PV resources through PVCs.
+
+ 
+
+MySQL replication: This Lab uses a single primary, asynchronous replication scheme for MySQL. All database writes are handled by a single primary. The database replicas asynchronously synchronize with the primary. This means the primary will not wait for the data to be copied onto the replicas. This can improve the performance of the primary at the expense of having replicas that are not always exact copies of the primary. Many applications can tolerate slight differences in the data and are able to improve the performance of database read workloads by allowing clients to read from the replicas.
+
+
+
+Instructions
+1. In your SSH shell, enter the following to declare a ConfigMap to allow primary MySQL pods to be configured differently than replica pods:
+
+- This ConfigMap will be referenced later in the StatefulSet declaration.
+- The master.cnf key maps to a value that declares a MySQL configuration which includes replication logs. 
+- The slave.cnf key maps to a MySQL configuration that enforces read-only behavior.
+
+cat <<EOF > mysql-configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql
+  labels:
+    app: mysql
+data:
+  master.cnf: |
+   # Apply this config only on the primary.
+   [mysqld]
+   log-bin
+  slave.cnf: |
+    # Apply this config only on replicas.
+    [mysqld]
+    super-read-only
+EOF
+
+
+2. Create the ConfigMap resource:
+
+$ kubectl create -f mysql-configmap.yaml 
+
+$ kubectl get cm
+NAME               DATA   AGE
+kube-root-ca.crt   1      303d
+mysql              2      27s
+
+
+3. Enter the following command to declare the services for the MySQL application:
+
+cat <<EOF > mysql-services.yaml
+# Headless service for stable DNS entries of StatefulSet members.
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  labels:
+    app: mysql
+spec:
+  ports:
+  - name: mysql
+    port: 3306
+  clusterIP: None
+  selector:
+    app: mysql
+---
+# Client service for connecting to any MySQL instance for reads.
+# For writes, you must instead connect to the primary: mysql-0.mysql.
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-read
+  labels:
+    app: mysql
+spec:
+  ports:
+  - name: mysql
+    port: 3306
+  selector:
+    app: mysql
+EOF
+
+
+Two services are defined:
+
+	- A headless service (clusterIP: None) i.e. name: mysql for pod DNS resolution. Because the service is named mysql, pods are accessible via pod-name.mysql.
+	
+	- A service name mysql-read to connect to for database reads. This service uses the default ServiceType of ClusterIP which assigns an internal IP address that load balances request to all the pods labeled with app: mysql.
+
+
+- Database writes need to be sent to the primary. The primary is the first pod provisioned in the StatefulSet and assigned a name mysql-0. 
+- The pod is thus accessed by the DNS entry in the headless service for mysql-0.mysql.
+
+
+4. Create the MySQL services:
+
+$ kubectl create -f mysql-services.yaml
+
+
+$ kubectl get svc
+NAME         TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)    AGE
+kubernetes   ClusterIP   10.96.0.1      <none>        443/TCP    303d
+mysql        ClusterIP   None           <none>        3306/TCP   6s
+mysql-read   ClusterIP   10.100.5.221   <none>        3306/TCP   6s
+
+
+5. Enter the following command to declare a default storage class that will be used to dynamically provision general-purpose (gp2) EBS volumes for the Kubernetes PVs:
+
+cat <<EOF > mysql-storageclass.yaml
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: general
+provisioner: kubernetes.io/aws-ebs
+parameters:
+  type: gp2
+EOF
+
+
+- The built-in aws-ebs storage provision is specified along with the type gp2.
+
+
+6. Create the storage class:
+
+kubectl create -f mysql-storageclass.yaml
+
+
+$ kubectl get storageclass
+NAME            PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE   ALLOWVOLUMEEXPANSION   AGE
+general         kubernetes.io/aws-ebs   Delete          Immediate           false                  8s
+gp2 (default)   kubernetes.io/aws-ebs   Delete          Immediate           false                  303d
+
+
+7. Enter the following command to declare the MySQL StatefulSet:
+
+cat <<'EOF' > mysql-statefulset.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql
+spec:
+  selector:
+    matchLabels:
+      app: mysql
+  serviceName: mysql
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      initContainers:
+      - name: init-mysql
+        image: mysql:5.7
+        command:
+        - bash
+        - "-c"
+        - |
+          set -ex
+          # Generate mysql server-id from pod ordinal index.
+          [[ `hostname` =~ -([0-9]+)$ ]] || exit 1
+          ordinal=${BASH_REMATCH[1]}
+          echo [mysqld] > /mnt/conf.d/server-id.cnf
+          # Add an offset to avoid reserved server-id=0 value.
+          echo server-id=$((100 + $ordinal)) >> /mnt/conf.d/server-id.cnf
+          # Copy appropriate conf.d files from config-map to emptyDir.
+          if [[ $ordinal -eq 0 ]]; then
+            cp /mnt/config-map/master.cnf /mnt/conf.d/
+          else
+            cp /mnt/config-map/slave.cnf /mnt/conf.d/
+          fi
+        volumeMounts:
+        - name: conf
+          mountPath: /mnt/conf.d
+        - name: config-map
+          mountPath: /mnt/config-map
+      - name: clone-mysql
+        image: gcr.io/google-samples/xtrabackup:1.0
+        command:
+        - bash
+        - "-c"
+        - |
+          set -ex
+          # Skip the clone if data already exists.
+          [[ -d /var/lib/mysql/mysql ]] && exit 0
+          # Skip the clone on primary (ordinal index 0).
+          [[ `hostname` =~ -([0-9]+)$ ]] || exit 1
+          ordinal=${BASH_REMATCH[1]}
+          [[ $ordinal -eq 0 ]] && exit 0
+          # Clone data from previous peer.
+          ncat --recv-only mysql-$(($ordinal-1)).mysql 3307 | xbstream -x -C /var/lib/mysql
+          # Prepare the backup.
+          xtrabackup --prepare --target-dir=/var/lib/mysql
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/mysql
+          subPath: mysql
+        - name: conf
+          mountPath: /etc/mysql/conf.d
+      containers:
+      - name: mysql
+        image: mysql:5.7
+        env:
+        - name: MYSQL_ALLOW_EMPTY_PASSWORD
+          value: "1"
+        ports:
+        - name: mysql
+          containerPort: 3306
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/mysql
+          subPath: mysql
+        - name: conf
+          mountPath: /etc/mysql/conf.d
+        resources:
+          requests:
+            cpu: 100m
+            memory: 200Mi
+        livenessProbe:
+          exec:
+            command: ["mysqladmin", "ping"]
+          initialDelaySeconds: 30
+          timeoutSeconds: 5
+        readinessProbe:
+          exec:
+            # Check we can execute queries over TCP (skip-networking is off).
+            command: ["mysql", "-h", "127.0.0.1", "-e", "SELECT 1"]
+          initialDelaySeconds: 5
+          timeoutSeconds: 1
+      - name: xtrabackup
+        image: gcr.io/google-samples/xtrabackup:1.0
+        ports:
+        - name: xtrabackup
+          containerPort: 3307
+        command:
+        - bash
+        - "-c"
+        - |
+          set -ex
+          cd /var/lib/mysql
+
+          # Determine binlog position of cloned data, if any.
+          if [[ -f xtrabackup_slave_info ]]; then
+            # XtraBackup already generated a partial "CHANGE MASTER TO" query
+            # because we're cloning from an existing replica.
+            mv xtrabackup_slave_info change_master_to.sql.in
+            # Ignore xtrabackup_binlog_info in this case (it's useless).
+            rm -f xtrabackup_binlog_info
+          elif [[ -f xtrabackup_binlog_info ]]; then
+            # We're cloning directly from primary. Parse binlog position.
+            [[ `cat xtrabackup_binlog_info` =~ ^(.*?)[[:space:]]+(.*?)$ ]] || exit 1
+            rm xtrabackup_binlog_info
+            echo "CHANGE MASTER TO MASTER_LOG_FILE='${BASH_REMATCH[1]}',\
+                  MASTER_LOG_POS=${BASH_REMATCH[2]}" > change_master_to.sql.in
+          fi
+
+          # Check if we need to complete a clone by starting replication.
+          if [[ -f change_master_to.sql.in ]]; then
+            echo "Waiting for mysqld to be ready (accepting connections)"
+            until mysql -h 127.0.0.1 -e "SELECT 1"; do sleep 1; done
+
+            echo "Initializing replication from clone position"
+            # In case of container restart, attempt this at-most-once.
+            mv change_master_to.sql.in change_master_to.sql.orig
+            mysql -h 127.0.0.1 <<EOF
+          $(<change_master_to.sql.orig),
+            MASTER_HOST='mysql-0.mysql',
+            MASTER_USER='root',
+            MASTER_PASSWORD='',
+            MASTER_CONNECT_RETRY=10;
+          START SLAVE;
+          EOF
+          fi
+
+          # Start a server to send backups when requested by peers.
+          exec ncat --listen --keep-open --send-only --max-conns=1 3307 -c \
+            "xtrabackup --backup --slave-info --stream=xbstream --host=127.0.0.1 --user=root"
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/mysql
+          subPath: mysql
+        - name: conf
+          mountPath: /etc/mysql/conf.d
+        resources:
+          requests:
+            cpu: 100m
+            memory: 50Mi
+      volumes:
+      - name: conf
+        emptyDir: {}
+      - name: config-map
+        configMap:
+          name: mysql
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 2Gi
+      storageClassName: general
+EOF
+
+
+There is a lot going on in the StatefulSet. Don't focus too much on the bash scripts that are performing MySQL-specific tasks. Some highlights to focus on, following the order they appear in the file are:
+
+- init-containers: Run to completion before any containers in the Pod spec
+
+	- init-mysql: Assigns a unique MySQL server ID starting from 100 for the first pod and incrementing by one, as wel		l as copying the appropriate configuration file from the config-map. Note the config-map is mounted via the VolumeMounts section. The ID and appropriate configuration file are persisted on the conf volume.
+
+	- clone-mysql: For pods after the primary, clone the database files from the preceding pod. The xtrabackup tool performs the file cloning and persists the data on the data volume.
+
+- spec.containers: Two containers in the pod
+
+	- mysql: Runs the MySQL daemon and mounts the configuration in the conf volume and the data in the data volume
+
+	- xtrabackup: A sidecar container that provides additional functionality to the mysql container. It starts a server to allow data cloning and begins replication on replicas using the cloned data files.
+
+- spec.volumes: conf and config-map volumes are stored on the node's local disk. They are easily re-generated if a failure occurs and don't require PVs.
+
+	- volumeClaimTemplates: A template for each pod to create a PVC with. ReadWriteOnce accessMode allows the PV to be mounted by only one node at a time in read/write mode. The storageClassName references the AWS EBS gp2 storage class named general that you created earlier. 
+
+
+
+8. Create the StatefulSet and start watching the associated pods:
+
+
+kubectl create -f mysql-statefulset.yaml
+
+$ kubectl get pods -l app=mysql --watch
+
+NAME      READY   STATUS    RESTARTS   AGE
+mysql-0   0/2     Pending   0          6s
+mysql-0   0/2     Pending   0          10s
+mysql-0   0/2     Init:0/2   0          10s
+mysql-0   0/2     Init:0/2   0          27s
+mysql-0   0/2     Init:1/2   0          39s
+mysql-0   0/2     PodInitializing   0          49s
+mysql-0   1/2     Running           0          50s
+mysql-0   2/2     Running           0          65s
+mysql-1   0/2     Pending           0          0s
+mysql-1   0/2     Pending           0          0s
+mysql-1   0/2     Pending           0          11s
+mysql-1   0/2     Init:0/2          0          11s
+mysql-1   0/2     Init:0/2          0          16s
+mysql-1   0/2     Init:1/2          0          28s
+mysql-1   0/2     Init:1/2          0          38s
+mysql-1   0/2     PodInitializing   0          48s
+mysql-1   1/2     Running           0          49s
+mysql-1   2/2     Running           0          55s
+mysql-2   0/2     Pending           0          0s
+mysql-2   0/2     Pending           0          1s
+mysql-2   0/2     Pending           0          11s
+mysql-2   0/2     Init:0/2          0          11s
+mysql-2   0/2     Init:0/2          0          20s
+mysql-2   0/2     Init:1/2          0          21s
+mysql-2   0/2     Init:1/2          0          22s
+mysql-2   0/2     PodInitializing   0          27s
+mysql-2   1/2     Running           0          28s
+mysql-2   2/2     Running           0          32s
+
+
+so, every mysql pod's transition to running 2/2:
+
+mysql-1   0/2     Pending           0          0s
+mysql-1   0/2     Init:0/2          0          11s
+mysql-1   0/2     Init:1/2          0          28s
+mysql-1   0/2     PodInitializing   0          48s
+mysql-1   1/2     Running           0          49s
+mysql-1   2/2     Running           0          55s
+
+$ kubectl get pods -l app=mysql
+NAME      READY   STATUS    RESTARTS   AGE
+mysql-0   2/2     Running   0          3m1s
+mysql-1   2/2     Running   0          116s
+mysql-2   2/2     Running   0          61s
+
+
+9. Navigate to AWS then and click Elastic Block Store > Volumes in the AWS EC2 Console.
+
+- The 2GiB PVs are listed here as each pod is created. Notice the Name and Tags which relay information about the PV and associated PVC.
+
+will see 3 EBS vols of 2Gb each got created and used:
+
+kubernetes-dynamic-pvc-e541e979-3839-4393-b383-6c2486d19ff3
+kubernetes-dynamic-pvc-b544239a-8837-42c3-9312-a64ebae1ab61
+kubernetes-dynamic-pvc-a35b3b6c-e9bd-4f0b-9e4d-1aae1fbaccef
+
+
+
+10. Return to your SSH shell and press ctrl+C to stop the watch when you see both containers (2/2) in the mysql-2 pod running: 
+
+
+11. Describe the PVs and PVCs:
+
+kubectl describe pv
+kubectl describe pvc
+
+
+$ kubectl get pv
+
+NAME                                       CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM                  STORAGECLASS   REASON   AGE
+pvc-a35b3b6c-e9bd-4f0b-9e4d-1aae1fbaccef   2Gi        RWO            Delete           Bound    default/data-mysql-2   general                 5m30s
+pvc-b544239a-8837-42c3-9312-a64ebae1ab61   2Gi        RWO            Delete           Bound    default/data-mysql-1   general                 6m25s
+pvc-e541e979-3839-4393-b383-6c2486d19ff3   2Gi        RWO            Delete           Bound    default/data-mysql-0   general                 7m31s
+
+
+
+$ kubectl get pvc
+
+NAME           STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+data-mysql-0   Bound    pvc-e541e979-3839-4393-b383-6c2486d19ff3   2Gi        RWO            general        7m51s
+data-mysql-1   Bound    pvc-b544239a-8837-42c3-9312-a64ebae1ab61   2Gi        RWO            general        6m46s
+data-mysql-2   Bound    pvc-a35b3b6c-e9bd-4f0b-9e4d-1aae1fbaccef   2Gi        RWO            general        5m51s
+
+
+- The PV descriptions include the AWS VolumeIDs, file system types (FSType), and associated PVC (Claim). The PVC description includes whether the PVC is currently Bound to a pod.
+
+
+12. Get the StatefulSet to confirm the current number of replicas matches the desired:
+
+$ kubectl get statefulset
+
+NAME    READY   AGE
+mysql   3/3     4m5s
+
+$ kubectl get pods
+NAME      READY   STATUS    RESTARTS   AGE
+mysql-0   2/2     Running   0          11m
+mysql-1   2/2     Running   0          10m
+mysql-2   2/2     Running   0          9m13s
+
+- With MySQL up and running, you will execute some commands against the database to demonstrate everything is working correctly and Kubernetes can gracefully handle failures and other requests.
+
+
+13. Run a temporary container to use mysql to connect to the primary at mysql-0.mysql and runs a few SQL commands:
+- The SQL commands create a mydb database with a notes table in it with one record and finally deletes the pod.
+
+kubectl run mysql-client --image=mysql:5.7 -i -t --rm --restart=Never --\
+  /usr/bin/mysql -h mysql-0.mysql -e "CREATE DATABASE mydb; CREATE TABLE mydb.notes (note VARCHAR(250)); INSERT INTO mydb.notes VALUES ('k8s Cloud Academy Lab');"
+
+pod "mysql-client" deleted
+
+
+here: --rm ensures the Pod is deleted when the shell exits, used to run a one-off container from the command line.
+
+
+14. Run a query using the mysql-read endpoint to select all of the notes in the table:
+
+kubectl run mysql-client --image=mysql:5.7 -i -t --rm --restart=Never --\
+  /usr/bin/mysql -h mysql-read -e "SELECT * FROM mydb.notes"
+  
+  
++-----------------------+
+| note                  |
++-----------------------+
+| k8s Cloud Academy Lab |
++-----------------------+
+pod "mysql-client" deleted
+
+
+15. Run an SQL command that outputs the MySQL server's ID to confirm that the requests are distributed to different pods:
+
+- Eventually, a request will be sent to each MySQL server. Recall that the primary has ID of 100.
+
+kubectl run mysql-client-loop --image=mysql:5.7 -i -t --rm --restart=Never --\
+  bash -ic "while sleep 1; do /usr/bin/mysql -h mysql-read -e 'SELECT @@server_id'; done"
+
++-------------+
+| @@server_id |
++-------------+
+|         101 |
++-------------+
++-------------+
+| @@server_id |
++-------------+
+|         102 |
++-------------+
++-------------+
+| @@server_id |
++-------------+
+|         100 |
++-------------+
++-------------+
+| @@server_id |
++-------------+
+|         100 |
++-------------+
++-------------+
+| @@server_id |
++-------------+
+|         101 |
++-------------+
++-------------+
+| @@server_id |
++-------------+
+|         101 |
++-------------+
+
+^C
+pod "mysql-client-loop" deleted
+pod default/mysql-client-loop terminated (Error)
+
+
+
+16. List the pods including the node name column:
+
+kubectl get pod -o wide
+
+NAME      READY   STATUS    RESTARTS   AGE   IP                NODE                                      NOMINATED NODE   READINESS GATES
+mysql-0   2/2     Running   0          21m   192.168.23.129    ip-10-0-0-11.us-west-2.compute.internal   <none>           <none>
+mysql-1   2/2     Running   0          20m   192.168.203.129   ip-10-0-0-10.us-west-2.compute.internal   <none>           <none>
+mysql-2   2/2     Running   0          19m   192.168.23.130    ip-10-0-0-11.us-west-2.compute.internal   <none>           <none>
+
+
+17. Enter the following command to simulate taking the node running the mysql-2 pod out of service for maintenance:
+
+node=$(kubectl get pods --field-selector metadata.name=mysql-2 -o=jsonpath='{.items[0].spec.nodeName}')
+kubectl drain $node --force --delete-local-data --ignore-daemonsets
+
+
+- where you replace the node environment variable is set to the name of the node running mysql-2 using a field-selector and jsonpath output to select the nodeName of the Pod. It will resemble ip-10-0-#-#.us-west-2.compute-internal. 
+
+- The drain command prevents new pods from being scheduled on the node and then evicts existing pods scheduled to it.
+
+
+18. Watch the mysql-2 pod get rescheduled to a different node:
+
+kubectl get pod -o wide --watch
+
+
+19. Uncordon the node you drained so that pods can be scheduled on it again:
+
+kubectl uncordon $node
+
+
+
+20. Delete the mysql-2 pod to simulate a node failure and watch it get automatically rescheduled:
+
+kubectl delete pod mysql-2
+kubectl get pod mysql-2 -o wide --watch
+
+
+
+21. Scale the number of replicas up to 5:
+
+kubectl scale --replicas=5 statefulset mysql
+
+
+22. Watch as new pods get scheduled in the cluster:
+
+kubectl get pods -l app=mysql --watch
+
+
+23. Verify that you see the new MySQL server IDs:
+
+kubectl run mysql-client-loop --image=mysql:5.7 -i -t --rm --restart=Never --\
+  bash -ic "while sleep 1; do /usr/bin/mysql -h mysql-read -e 'SELECT @@server_id'; done"
+  
+  
+24. Confirm that the data is replicated in the new mysql-4 pod:
+
+kubectl run mysql-client --image=mysql:5.7 -i -t --rm --restart=Never --\
+  /usr/bin/mysql -h mysql-4.mysql -e "SELECT * FROM mydb.notes"
+  
+
+
+25. Display the internal virtual IP of the mysql-read endpoint:
+
+kubectl get services mysql-read
+
+Recall the mysql-read service used the default type of ClusterIP so it is only accessible inside the cluster.
+
+
+
+26. Append a load balancer type to the mysql-read service declaration:
+
+echo "  type: LoadBalancer" >> mysql-services.yaml
+
+
+
+27. Apply the changes to the mysql-read service:
+
+kubectl apply -f mysql-services.yaml
+
+
+- The apply command can update existing resources. It will create resources if they don't already exist. Because you created the services using the create command instead of apply you will see a warning. The warnings can be ignored for this demonstration.
+
+ 
+ 
+ 
+28. Re-display the mysql-read service status:
+
+kubectl get services mysql-read
+
+
+- Kubernetes is in the process of provisioning an elastic load balancer (ELB) to access the mysql-read service from outside the cluster.
+
+
+29. After a minute, describe the mysql-read service to find the DNS name of the external load balancer endpoint:
+
+
+kubectl describe services mysql-read | grep "LoadBalancer Ingress"
+
+
+30. Use the external load balancer to send some read requests to the cluster:
+
+
+load_balancer=$(kubectl get services mysql-read -o=jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+kubectl run mysql-client-loop --image=mysql:5.7 -i -t --rm --restart=Never --\
+  bash -ic "while sleep 1; do /usr/bin/mysql -h $load_balancer -e 'SELECT @@server_id'; done"
+  
+
+
+- where the load_balancer variable stores the ELB DNS name. It will resemble a830e12d78dcd11e79aba028416f4825-905974806.us-west-2.elb.amazonaws.com. You are now accessing the cluster from the ELB which provides access outside of the cluster.
+
+
+- Note: It can take a minute for the nodes to be added to the load balancer. You will see unknown MySQL host messages until the nodes are added. Let the loop continue to run until you start seeing server IDs being displayed.
+
+
+
+
+  
+
+
+
+
+
+
+
+
 
 
 
