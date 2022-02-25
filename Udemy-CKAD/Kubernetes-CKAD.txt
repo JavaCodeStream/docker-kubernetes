@@ -8621,6 +8621,7 @@ mysql-2   2/2     Running   0          9m13s
 
 13. Run a temporary container to use mysql to connect to the primary at mysql-0.mysql and runs a few SQL commands:
 - The SQL commands create a mydb database with a notes table in it with one record and finally deletes the pod.
+- here using the master pod for writes, i.e. /usr/bin/mysql -h mysql-0.mysql
 
 kubectl run mysql-client --image=mysql:5.7 -i -t --rm --restart=Never --\
   /usr/bin/mysql -h mysql-0.mysql -e "CREATE DATABASE mydb; CREATE TABLE mydb.notes (note VARCHAR(250)); INSERT INTO mydb.notes VALUES ('k8s Cloud Academy Lab');"
@@ -8648,6 +8649,8 @@ pod "mysql-client" deleted
 15. Run an SQL command that outputs the MySQL server's ID to confirm that the requests are distributed to different pods:
 
 - Eventually, a request will be sent to each MySQL server. Recall that the primary has ID of 100.
+- here using the regular service pointing all 2 pods i.e. /usr/bin/mysql -h mysql-read
+
 
 kubectl run mysql-client-loop --image=mysql:5.7 -i -t --rm --restart=Never --\
   bash -ic "while sleep 1; do /usr/bin/mysql -h mysql-read -e 'SELECT @@server_id'; done"
@@ -8701,8 +8704,12 @@ mysql-2   2/2     Running   0          19m   192.168.23.130    ip-10-0-0-11.us-w
 
 17. Enter the following command to simulate taking the node running the mysql-2 pod out of service for maintenance:
 
-node=$(kubectl get pods --field-selector metadata.name=mysql-2 -o=jsonpath='{.items[0].spec.nodeName}')
-kubectl drain $node --force --delete-local-data --ignore-daemonsets
+$ node=$(kubectl get pods --field-selector metadata.name=mysql-2 -o=jsonpath='{.items[0].spec.nodeName}')
+
+$ echo $node
+ip-10-0-0-10.us-west-2.compute.internal
+
+$ kubectl drain $node --force --delete-local-data --ignore-daemonsets
 
 
 - where you replace the node environment variable is set to the name of the node running mysql-2 using a field-selector and jsonpath output to select the nodeName of the Pod. It will resemble ip-10-0-#-#.us-west-2.compute-internal. 
@@ -8712,8 +8719,13 @@ kubectl drain $node --force --delete-local-data --ignore-daemonsets
 
 18. Watch the mysql-2 pod get rescheduled to a different node:
 
-kubectl get pod -o wide --watch
+$ kubectl get pod -o wide --watch
 
+NAME      READY   STATUS    RESTARTS   AGE     IP               NODE                                      NOMINATED NODE   READINESS GATES
+mysql-0   2/2     Running   0          33s     192.168.23.133   ip-10-0-0-11.us-west-2.compute.internal   <none>           <none>
+mysql-1   2/2     Running   0          9m39s   192.168.23.129   ip-10-0-0-11.us-west-2.compute.internal   <none>           <none>
+mysql-2   1/2     Running   0          15s     192.168.23.134   ip-10-0-0-11.us-west-2.compute.internal   <none>           <none>
+mysql-2   2/2     Running   0          18s     192.168.23.134   ip-10-0-0-11.us-west-2.compute.internal   <none>           <none>
 
 19. Uncordon the node you drained so that pods can be scheduled on it again:
 
@@ -8723,45 +8735,153 @@ kubectl uncordon $node
 
 20. Delete the mysql-2 pod to simulate a node failure and watch it get automatically rescheduled:
 
-kubectl delete pod mysql-2
-kubectl get pod mysql-2 -o wide --watch
+$ kubectl delete pod mysql-2
+
+$ kubectl get pod mysql-2 -o wide --watch
+
+NAME      READY   STATUS     RESTARTS   AGE   IP       NODE                                      NOMINATED NODE   READINESS GATES
+mysql-2   0/2     Init:0/2   0          8s    <none>   ip-10-0-0-11.us-west-2.compute.internal   <none>           <none>
+mysql-2   0/2     Init:0/2   0          17s   <none>   ip-10-0-0-11.us-west-2.compute.internal   <none>           <none>
+mysql-2   0/2     Init:1/2   0          18s   192.168.23.135   ip-10-0-0-11.us-west-2.compute.internal   <none>           <none>
+mysql-2   0/2     PodInitializing   0          19s   192.168.23.135   ip-10-0-0-11.us-west-2.compute.internal   <none>           <none>
+mysql-2   1/2     Running           0          20s   192.168.23.135   ip-10-0-0-11.us-west-2.compute.internal   <none>           <none>
+mysql-2   2/2     Running           0          30s   192.168.23.135   ip-10-0-0-11.us-west-2.compute.internal   <none>           <none>
 
 
 
 21. Scale the number of replicas up to 5:
 
-kubectl scale --replicas=5 statefulset mysql
+kubectl scale statefulset mysql --replicas=5 
 
 
 22. Watch as new pods get scheduled in the cluster:
 
-kubectl get pods -l app=mysql --watch
+$ kubectl get pods -l app=mysql --watch
 
+NAME      READY   STATUS     RESTARTS   AGE     IP               NODE                                      NOMINATED NODE   READINESS GATES
+mysql-0   2/2     Running    0          3m57s   192.168.23.133   ip-10-0-0-11.us-west-2.compute.internal   <none>           <none>
+mysql-1   2/2     Running    0          13m     192.168.23.129   ip-10-0-0-11.us-west-2.compute.internal   <none>           <none>
+mysql-2   2/2     Running    0          84s     192.168.23.135   ip-10-0-0-11.us-west-2.compute.internal   <none>           <none>
+mysql-3   0/2     Init:0/2   0          14s     <none>           ip-10-0-0-11.us-west-2.compute.internal   <none>           <none>
+mysql-3   0/2     Init:0/2   0          15s     <none>           ip-10-0-0-11.us-west-2.compute.internal   <none>           <none>
+mysql-3   0/2     Init:1/2   0          16s     192.168.23.136   ip-10-0-0-11.us-west-2.compute.internal   <none>           <none>
+mysql-3   0/2     Init:1/2   0          17s     192.168.23.136   ip-10-0-0-11.us-west-2.compute.internal   <none>           <none>
+mysql-3   0/2     PodInitializing   0          23s     192.168.23.136   ip-10-0-0-11.us-west-2.compute.internal   <none>           <none>
+mysql-3   1/2     Running           0          24s     192.168.23.136   ip-10-0-0-11.us-west-2.compute.internal   <none>           <none>
+mysql-3   2/2     Running           0          34s     192.168.23.136   ip-10-0-0-11.us-west-2.compute.internal   <none>           <none>
+mysql-4   0/2     Pending           0          0s      <none>           <none>                                    <none>           <none>
+mysql-4   0/2     Pending           0          0s      <none>           <none>                                    <none>           <none>
+mysql-4   0/2     Pending           0          10s     <none>           ip-10-0-0-11.us-west-2.compute.internal   <none>           <none>
+mysql-4   0/2     Init:0/2          0          10s     <none>           ip-10-0-0-11.us-west-2.compute.internal   <none>           <none>
+mysql-4   0/2     Init:0/2          0          19s     <none>           ip-10-0-0-11.us-west-2.compute.internal   <none>           <none>
+mysql-4   0/2     Init:1/2          0          20s     192.168.23.137   ip-10-0-0-11.us-west-2.compute.internal   <none>           <none>
+mysql-4   0/2     Init:1/2          0          21s     192.168.23.137   ip-10-0-0-11.us-west-2.compute.internal   <none>           <none>
+mysql-4   0/2     PodInitializing   0          26s     192.168.23.137   ip-10-0-0-11.us-west-2.compute.internal   <none>           <none>
+mysql-4   1/2     Running           0          27s     192.168.23.137   ip-10-0-0-11.us-west-2.compute.internal   <none>           <none>
+mysql-4   2/2     Running           0          36s     192.168.23.137   ip-10-0-0-11.us-west-2.compute.internal   <none>           <none>
+
+
+$ kubectl get pod -l app=mysql -o wide
+
+NAME      READY   STATUS    RESTARTS   AGE     IP               NODE                                      NOMINATED NODE   READINESS GATES
+mysql-0   2/2     Running   0          6m8s    192.168.23.133   ip-10-0-0-11.us-west-2.compute.internal   <none>           <none>
+mysql-1   2/2     Running   0          15m     192.168.23.129   ip-10-0-0-11.us-west-2.compute.internal   <none>           <none>
+mysql-2   2/2     Running   0          3m35s   192.168.23.135   ip-10-0-0-11.us-west-2.compute.internal   <none>           <none>
+mysql-3   2/2     Running   0          2m25s   192.168.23.136   ip-10-0-0-11.us-west-2.compute.internal   <none>           <none>
+mysql-4   2/2     Running   0          111s    192.168.23.137   ip-10-0-0-11.us-west-2.compute.internal   <none>           <none>
 
 23. Verify that you see the new MySQL server IDs:
 
 kubectl run mysql-client-loop --image=mysql:5.7 -i -t --rm --restart=Never --\
   bash -ic "while sleep 1; do /usr/bin/mysql -h mysql-read -e 'SELECT @@server_id'; done"
   
-  
+
++-------------+
+| @@server_id |
++-------------+
+|         100 |
++-------------+
++-------------+
+| @@server_id |
++-------------+
+|         103 |
++-------------+
++-------------+
+| @@server_id |
++-------------+
+|         104 |
++-------------+
++-------------+
+| @@server_id |
++-------------+
+|         103 |
++-------------+
++-------------+
+| @@server_id |
++-------------+
+|         101 |
++-------------+
+
+
 24. Confirm that the data is replicated in the new mysql-4 pod:
 
 kubectl run mysql-client --image=mysql:5.7 -i -t --rm --restart=Never --\
   /usr/bin/mysql -h mysql-4.mysql -e "SELECT * FROM mydb.notes"
   
++-----------------------+
+| note                  |
++-----------------------+
+| k8s Cloud Academy Lab |
++-----------------------+
+pod "mysql-client" deleted
 
 
 25. Display the internal virtual IP of the mysql-read endpoint:
 
-kubectl get services mysql-read
+$ kubectl get services mysql-read
+
+NAME         TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)    AGE
+mysql-read   ClusterIP   10.102.135.3   <none>        3306/TCP   18m
 
 Recall the mysql-read service used the default type of ClusterIP so it is only accessible inside the cluster.
 
 
 
-26. Append a load balancer type to the mysql-read service declaration:
+26. Append a load balancer type to the mysql-read service declaration, i.e. adding type: LoadBalancer to clusterIp service.
 
-echo "  type: LoadBalancer" >> mysql-services.yaml
+$ echo "  type: LoadBalancer" >> mysql-services.yaml
+
+$ cat mysql-services.yaml 
+# Headless service for stable DNS entries of StatefulSet members.
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  labels:
+    app: mysql
+spec:
+  ports:
+  - name: mysql
+    port: 3306
+  clusterIP: None
+  selector:
+    app: mysql
+---
+# Client service for connecting to any MySQL instance for reads.
+# For writes, you must instead connect to the primary: mysql-0.mysql.
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-read
+  labels:
+    app: mysql
+spec:
+  ports:
+  - name: mysql
+    port: 3306
+  selector:
+    app: mysql
+  type: LoadBalancer
 
 
 
@@ -8777,7 +8897,10 @@ kubectl apply -f mysql-services.yaml
  
 28. Re-display the mysql-read service status:
 
-kubectl get services mysql-read
+$ kubectl get services mysql-read
+
+NAME         TYPE           CLUSTER-IP     EXTERNAL-IP                                                              PORT(S)          AGE
+mysql-read   LoadBalancer   10.102.135.3   a1984bd92a9e846c9a4ee2d354bb66d2-638182949.us-west-2.elb.amazonaws.com   3306:30757/TCP   21m
 
 
 - Kubernetes is in the process of provisioning an elastic load balancer (ELB) to access the mysql-read service from outside the cluster.
@@ -8786,16 +8909,44 @@ kubectl get services mysql-read
 29. After a minute, describe the mysql-read service to find the DNS name of the external load balancer endpoint:
 
 
-kubectl describe services mysql-read | grep "LoadBalancer Ingress"
+$ kubectl describe services mysql-read | grep "LoadBalancer Ingress"
+
+LoadBalancer Ingress:     a1984bd92a9e846c9a4ee2d354bb66d2-638182949.us-west-2.elb.amazonaws.com
+
 
 
 30. Use the external load balancer to send some read requests to the cluster:
 
 
-load_balancer=$(kubectl get services mysql-read -o=jsonpath='{.status.loadBalancer.ingress[0].hostname}')
-kubectl run mysql-client-loop --image=mysql:5.7 -i -t --rm --restart=Never --\
+$ load_balancer=$(kubectl get services mysql-read -o=jsonpath='{.status.loadBalancer.ingress[0].hostname}') && echo $load_balancer
+a1984bd92a9e846c9a4ee2d354bb66d2-638182949.us-west-2.elb.amazonaws.com
+
+
+$ kubectl run mysql-client-loop --image=mysql:5.7 -i -t --rm --restart=Never --\
   bash -ic "while sleep 1; do /usr/bin/mysql -h $load_balancer -e 'SELECT @@server_id'; done"
   
++-------------+
+| @@server_id |
++-------------+
+|         103 |
++-------------+
++-------------+
+| @@server_id |
++-------------+
+|         102 |
++-------------+
++-------------+
+| @@server_id |
++-------------+
+|         100 |
++-------------+
++-------------+
+| @@server_id |
++-------------+
+|         101 |
++-------------+
+..
+..
 
 
 - where the load_balancer variable stores the ELB DNS name. It will resemble a830e12d78dcd11e79aba028416f4825-905974806.us-west-2.elb.amazonaws.com. You are now accessing the cluster from the ELB which provides access outside of the cluster.
@@ -8805,8 +8956,119 @@ kubectl run mysql-client-loop --image=mysql:5.7 -i -t --rm --restart=Never --\
 
 
 
+Kubernetes Dashboard
+------------------------
+Earlier you saw that the Kubernetes Dashboard pod is running in the kube-system namespace. The Kubernetes Dashboard provides a website for monitoring and managing your Kubernetes cluster. In this lab step, you will familiarize yourself with the Kubernetes Dashboard and also demonstrate how to use a port forward to connect to the control plane node. To gain full access to the dashboard you will first bind the cluster-admin role to the dashboard's service account.
+
+
+1. In your SSH shell, enter the following to create a cluster role binding for the kubernetes-dashboard service account:
+
+cat << EOF > dashboard-admin.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kubernetes-dashboard
+  labels:
+    k8s-app: kubernetes-dashboard
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: kubernetes-dashboard
+  namespace: kubernetes-dashboard
+EOF
+
+- The roleRef reference the cluster-admin role and the subjects to bind the role to is the kubernetes-dashboard ServiceAccount.
+
+
+2. Enter the following to create the cluster role binding:
+
+kubectl delete -f dashboard-admin.yaml # delete the default role binding
+
+$ kubectl delete -f dashboard-admin.yaml
+clusterrolebinding.rbac.authorization.k8s.io "kubernetes-dashboard" deleted
+
+
+kubectl create -f dashboard-admin.yaml
+
+
+3. Enter the following to output a token for the kubernetes dashboard service account which you will need to sign in to the dashboard later:
+
+kubectl -n kubernetes-dashboard describe secret $(kubectl -n kubernetes-dashboard get secret | grep dashboard-admin | awk '{print $1}') \
+  | tail -1 \
+  | awk '{print $2}'
+
+eyJhbGciOiJSUzI1NiIsImtpZCI6ImV6N1VINVNBUGpHUldqcU0wTEQ3NWtpdXZIQUpFS0ZIWjBDNHlCLWJRTzgifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJrdWJlcm5ldGVzLWRhc2hib2FyZCIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VjcmV0Lm5hbWUiOiJrdWJlcm5ldGVzLWRhc2hib2FyZC10b2tlbi04NW0yNiIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VydmljZS1hY2NvdW50Lm5hbWUiOiJrdWJlcm5ldGVzLWRhc2hib2FyZCIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VydmljZS1hY2NvdW50LnVpZCI6IjI2NmYwN2VjLTIxN2EtNGYwZC05YTFhLWI0YmZlMWI5ZmNmYSIsInN1YiI6InN5c3RlbTpzZXJ2aWNlYWNjb3VudDprdWJlcm5ldGVzLWRhc2hib2FyZDprdWJlcm5ldGVzLWRhc2hib2FyZCJ9.T6aSe8oHAPMsAT0IKWkYmNuoIchITy-XkrjasHbbbR01j1fsMu-5kTM_sO1I5bp1ZObbN5zwYq2InMhw-gvLHnM3fA-DBrsogHKjX68I4M3BLeUhAEEypfXH0FnEEOQdvvU6KI4G8af7g5tUaPijpqO6_WcM9fBokpYEZfuFh8ufujT9DCt34mcvTxQpePk2Rj2TtphgcGAJLQjj6u9m553R4E6RTHfJW-PgdGhDUgeIbrgoI16xmY9bxoAOJjAMbt5vvYbAPmnNbUdNV_WTVoS3dImE_TKY-LwLZ3ZhH_KPImrSxBO7MVikWjbqkEkitL8FdWO2g4KnHXwuN17zgA
 
   
+
+4. Run a Kubernetes proxy server on the bastion in order to proxy requests to the control plane node from outside the private subnet:
+- a kubectl port-forward in order to connect to the cluster from the bastion host.
+- The --address option allows connections from anywhere. This is only acceptable for demonstration purposes.
+
+
+$ sudo kubectl port-forward -n kubernetes-dashboard --address 0.0.0.0 service/kubernetes-dashboard 8001:443
+
+Forwarding from 0.0.0.0:8001 -> 8443
+Handling connection for 8001
+Handling connection for 8001
+
+keep it running... do not close.
+
+
+5. Return to the EC2 Console and copy the Public IP of the bastion-host instance.
+
+6. Open a new browser tab, type https:// and paste the public IP of the bastion host, and append :8001 onto the end of the public IP in the address bar to open the Kubernetes Dashboard for the cluster:
+
+https://52.27.59.190:8001/
+
+7. Allow your browser to view the website. in recent versions of Chrome, you can do so by typing thisisunsafe
+
+The dashboard asks you for a method to authenticate, you will use the token you output before a token to sign in.
+
+8. Copy the token you output earlier at the step number 3 (in the web terminal, you only need to highlight the token and it is automatically copied to your clipboard) and paste it onto the Enter token line and click Sign in.
+
+From the dashboard, you can get the same information found using kubectl commands but with an easy-to-navigate interface.
+
+
+9. Navigate to Workloads > Stateful Sets > mysql:
+
+The CPU and Memory column graphs are visible because metrics server is running in your Kubernetes cluster.
+
+
+10. Click on the Scale button near the top-right corner of the mysql Stateful Sets view:
+
+https://52.27.59.190:8001/#/statefulset/default/mysql?namespace=default
+
+
+11. In the Scale a resource dialog, enter the following value and click Scale:
+
+Desired replicas: 3
+
+12. Scroll down to the Pods section and observe the mysql-4 pod is removed first, followed by the mysql-3 pod.
+
+Pods are removed in the reverse order that they are created in StatefulSets.
+
+13. Navigate to Cluster > Persistent Volumes:
+
+Notice that there are five PVs. PVs remain after the pods are deleted in a scale-down event. If you want to delete PVs after scaling down, you have to manually perform the operation.
+
+14. Click the three dots in the last column of the table for the PV associated with Claim default/data-mysql-4 (it is the first row) and click Delete.
+
+15. In the confirmation dialog, click Delete.
+
+The operation will not delete the PV because it is currently bound by a PVC.
+
+16. Navigate to Config and Storage > Persistent Volume Claims and click on data-mysql-4.
+
+17. Delete the PVC by clicking Delete in the upper-right corner.
+
+18. Click Delete in the confirmation dialog.
+
+19. Return. to the PV view and confirm there are now only 4 PVs. 
+
 
 
 
@@ -11853,7 +12115,6 @@ drwxr-xr-x 3 root root  4096 Jan 23 10:58 charts
 
 
 
-
 helm install from already pulled charts
 ------------------------------------------ 
 - Install the apache from the downloaded helm package.
@@ -11864,6 +12125,59 @@ $ helm install mywebapp ./apache
 $ helm list     
 NAME            NAMESPACE       REVISION        UPDATED                                 STATUS          CHART       APP VERSION
 mywebapp        default         1               2021-10-06 16:46:40.278694926 +0000 UTC deployed        apache-8.8.32.4.50
+
+
+
+
+helm create
+----------------------
+- to create a new chart
+
+$ help create <chart_name>
+- this will create a bare bone directory structure for us to start.
+
+directory structure:
+
+sample-app
+	- Chart.yaml				# help chart info.
+	- charts					# any dependent helm chart
+	- templates					# all kubernetes manifest files corresponding to various objects needed and templatized.
+		- NOTES.txt
+		- _helpers.tpl
+		- deployment.yaml
+		- hpa.yaml
+		- ingress.yaml
+		- service.yaml
+		- serviceaccount.yaml
+		- tests
+			- test-connection.yaml
+	- values.yaml				# templace placeholder values.
+
+
+Chart.yaml
+----------
+apiVersion: v2
+name: mysampleapp
+description: my sample app
+Application
+type: application
+version: 0.1.3
+appVersion: 1.16.0
+
+
+
+helm package
+-----------------------
+- created the tar file outcome of the above directory structurce above.
+
+$ helm package sample-app
+ - produces the tar file named: <name>-<version>.tgz ex: mysampleapp-0.1.3.tgz
+ 
+ 
+$ helm install <release_name> mysampleapp-0.1.3.tgz
+
+
+
 
 
 
@@ -11974,8 +12288,165 @@ kubectl annotate --help
 kubectl label --help
 
 
+-----------------------------------------------------------------------------------------
+Commands
+The following commands are used in the Introduction to Kubernetes course, organized by lesson.
+
+ 
+Pods
+kubectl get pods
+cd src
+kubectl create -f 1.1-basic_pod.yaml
+kubectl get pods
+kubectl describe pod mypod | more
+kubectl delete pod mypod
+kubectl create -f 1.2-port_pod.yaml
+kubectl describe pod mypod | more
+curl 192.168.###.###:80 (Replace ###.### with the IP address octets from the describe output)
+# This command will time out (see the next lesson to understand why)
+kubectl describe pod mypod | more
+kubectl delete pod mypod
+kubectl create -f 1.4-resources_pod.yaml
+kubectl describe pod mypod | more
+Note: kubectl will accept the singular or plural form of resource kinds. For example kubectl get pods and kubectl get pod are equivalent.
+
+ 
+
+Services
+kubectl create -f 2.1-web_service.yaml
+kubectl get services
+kubectl describe service webserver
+kubectl describe nodes | grep -i addresses -A 1
+curl 10.0.0.100:3#### (replace #### with the actual port digits)
+ 
+
+Multi-Container Pods
+kubectl create -f 3.1-namespace.yaml
+kubectl create -f 3.2-multi_container.yaml -n microservice
+kubectl get -n microservice pod app
+kubectl describe -n microservice pod app
+kubectl logs -n microservice app counter --tail 10
+kubectl logs -n microservice app poller -f
+ 
+
+Service Discovery
+kubectl create -f 4.1-namespace.yaml
+kubectl create -f 4.2-data_tier.yaml -n service-discovery
+kubectl get pod -n service-discovery
+kubectl describe service -n service-discovery data-tier
+kubectl create -f 4.3-app_tier.yaml -n service-discovery
+kubectl create -f 4.4-support_tier.yaml -n service-discovery
+kubectl get pods -n service-discovery
+kubectl logs -n service-discovery support-tier poller -f
+ 
+
+Deployments
+kubectl create -f 5.1-namespace.yaml
+kubectl create -n deployments -f 5.2-data_tier.yaml -f 5.3-app_tier.yaml -f 5.4-support_tier.yaml
+kubectl get -n deployments deployments
+kubectl -n deployments get pods
+kubectl scale -n deployments deployment support-tier --replicas=5
+kubectl -n deployments get pods
+kubectl delete -n deployments pods support-tier-... support-tier-... --wait=false (You can use tab completion to display the possible values to replace ... with)
+watch -n 1 kubectl -n deployments get pods
+kubectl scale -n deployments deployment app-tier --replicas=5
+kubectl -n deployments get pods
+kubectl describe -n deployments service app-tier
+ 
+
+Autoscaling
+# kubectl create -f metrics-server/ # metrics-server is pre-installed on the playground so you don't need to run this command
+watch kubectl top pods -n deployments
+kubectl create -f 6.1-app_tier_cpu_request.yaml -n deployments
+kubectl apply -f 6.1-app_tier_cpu_request.yaml -n deployments
+kubectl get -n deployments deployments app-tier
+kubectl create -f 6.2-autoscale.yaml -n deployments
+watch -n 1 kubectl get -n deployments deployments app-tier # This can take up to 13 minutes to take effect. You may want to skip waiting. The image below shows the output of kubectl describe -n deployments hpa after waiting long enough
+alt
+kubectl api-resources
+kubectl describe -n deployments hpa
+kubectl get -n deployments hpa
+kubectl edit -n deployments hpa
+watch -n 1 kubectl get -n deployments deployments app-tier
+ 
+
+Rolling Updates and Rollbacks
+kubectl delete -n deployments hpa app-tier
+kubectl edit -n deployments deployment app-tier
+watch -n 1 kubectl get -n deployments deployments app-tier 
+kubectl edit -n deployments deployment app-tier
+kubectl rollout -n deployments status deployment app-tier
+tmux
+kubectl edit -n deployments deployments app-tier (left terminal)
+kubectl rollout -n deployments status deployment app-tier (right terminal)
+kubectl rollout -n deployments pause deployment app-tier (left terminal)
+kubectl get deployments -n deployments app-tier (left terminal)
+kubectl rollout -n deployments resume deployment app-tier (left terminal)
+kubectl rollout -n deployments undo deployment app-tier
+kubectl scale -n deployments deployment app-tier --replicas=1
+ 
+
+Probes
+kubectl create -f 7.1-namespace.yaml
+kubectl create -f 7.2-data_tier.yaml -n probes
+kubectl get deployments -n probes -w
+kubectl create -f 7.3-app_tier.yaml -n probes
+kubectl get -n probes deployments app-tier -w
+kubectl get -n probes pods
+kubectl logs -n probes app-tier-... | cut -d' ' -f5,8-11 (You can use tab completion to display the possible values to replace ... with)
+ 
+
+Init Containers
+kubectl apply -f 8.1-app_tier.yaml -n probes
+kubectl describe pod -n probes app-tier... (You can use tab completion to display the possible values to replace ... with)
+kubectl logs -n probes app-tier-... await-redis (You can use tab completion to display the possible values to replace ... with)
+ 
+
+Volumes
+kubectl -n deployments logs support-tier-... poller --tail 1 (You can use tab completion to display the possible values to replace ... with)
+kubectl exec -n deployments data-tier-... -it -- /bin/bash (You can use tab completion to display the possible values to replace ... with)
+kill 1
+kubectl -n deployments get pods
+kubectl -n deployments logs support-tier-... poller --tail 1 (You can use tab completion to display the possible values to replace ... with)
+Note: It takes around a couple of minutes for the effects of the restart to settle. The poller will stop updating and report the last value before restarting until it can reach the new data tier value. Try again after a minute if you don't see a relatively small value)
+kubectl create -f 9.1-namespace.yaml
+aws ec2 describe-volumes --region=us-west-2 --filters="Name=tag:Type,Values=PV" --query="Volumes[0].VolumeId" --output=text
+vol_id=$(aws ec2 describe-volumes --region=us-west-2 --filters="Name=tag:Type,Values=PV" --query="Volumes[0].VolumeId" --output=text)
+sed -i "s/INSERT_VOLUME_ID/$vol_id/" 9.2-pv_data_tier.yaml
+kubectl create -n volumes -f 9.2-pv_data_tier.yaml -f 9.3-app_tier.yaml -f 9.4-support_tier.yaml
+kubectl describe -n volumes pvc
+kubectl describe -n volumes pod data-tier-... (You can use tab completion to display the possible values to replace ... with)
+kubectl logs -n volumes support-tier-... poller --tail 1 (You can use tab completion to display the possible values to replace ... with)
+Note: It takes a few minutes for all of the readiness checks to pass and for the counter to start incrementing. If you don't see a counter value output then try again after a minute or two.
+kubectl delete -n volumes deployments data-tier
+kubectl get -n volumes pods
+kubectl create -n volumes -f 9.2-pv_data_tier.yaml
+kubectl logs -n volumes support-tier-... poller --tail 1 (You can use tab completion to display the possible values to replace ... with)
+ 
+
+ConfigMaps and Secrets
+kubectl create -f 10.1-namespace.yaml
+kubectl create -n config -f 10.2-data_tier_config.yaml -f 10.3-data_tier.yaml
+kubectl exec -n config data-tier-... -it -- /bin/bash (You can use tab completion to display the possible values to replace ... with)
+cat /etc/redis/redis.conf
+redis-cli CONFIG GET tcp-keepalive
+exit
+kubectl edit -n config configmaps redis-config
+kubectl exec -n config data-tier-... -- redis-cli CONFIG GET tcp-keepalive (You can use tab completion to display the possible values to replace ... with)
+kubectl rollout -n config restart deployment data-tier
+kubectl exec -n config data-tier-... -- redis-cli CONFIG GET tcp-keepalive (You can use tab completion to display the possible values to replace ... with)
+kubectl create -f 10.4-app_tier_secret.yaml -n config
+kubectl describe -n config secret app-tier-secret
+kubectl edit -n config secrets app-tier-secret
+kubectl create -f 10.5-app_tier.yaml -n config
+kubectl exec -n config app-tier-... -- env (You can use tab completion to display the possible values to replace ... with)
 
 
 
+------------------------------
+Performing a Kubernetes Deployment using ConfigMaps and Helm
 
+D:\work\learn\docker-kubernetes\Udemy-CKAD\lab\code\App\solution-code
+
+kubectl apply -f deployment.yaml
 
