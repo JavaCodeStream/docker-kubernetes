@@ -3,6 +3,113 @@ https://github.com/lucassha/CKAD-resources
 https://github.com/dgkanatsios/CKAD-exercises
 
 
+Install Kubectl and Minikube in windows
+========================================
+1/ find if virtualization is enabled?
+cmd -> type "systeminfo"
+
+C:\Users\pauls>systeminfo
+
+Host Name:                 DESKTOP-FTR47NO
+OS Name:                   Microsoft Windows 10 Home Single Language
+OS Version:                10.0.19042 N/A Build 19042
+OS Manufacturer:           Microsoft Corporation
+OS Configuration:          Standalone Workstation
+OS Build Type:             Multiprocessor Free
+Registered Owner:          paulsandip18@outlook.com
+Registered Organization:   N/A
+Product ID:                00327-35886-67560-AAOEM
+Original Install Date:     23-12-2020, 15:53:48
+System Boot Time:          29-04-2022, 11:08:10
+System Manufacturer:       Dell Inc.
+System Model:              Inspiron 5490
+System Type:               x64-based PC
+Processor(s):              1 Processor(s) Installed.
+                           [01]: Intel64 Family 6 Model 142 Stepping 12 GenuineIntel ~1609 Mhz
+BIOS Version:              Dell Inc. 1.16.1, 09-11-2021
+Windows Directory:         C:\WINDOWS
+System Directory:          C:\WINDOWS\system32
+Boot Device:               \Device\HarddiskVolume1
+System Locale:             en-us;English (United States)
+Input Locale:              en-us;English (United States)
+Time Zone:                 (UTC+05:30) Chennai, Kolkata, Mumbai, New Delhi
+Total Physical Memory:     7,976 MB
+Available Physical Memory: 3,624 MB
+Virtual Memory: Max Size:  19,752 MB
+Virtual Memory: Available: 14,606 MB
+Virtual Memory: In Use:    5,146 MB
+Page File Location(s):     C:\pagefile.sys
+Domain:                    WORKGROUP
+Logon Server:              \\DESKTOP-FTR47NO
+Hotfix(s):                 15 Hotfix(s) Installed.
+                           [01]: KB5012117
+                           [02]: KB4562830
+                           [03]: KB4570334
+                           [04]: KB4577586
+                           [05]: KB4580325
+                           [06]: KB4586864
+                           [07]: KB4589212
+                           [08]: KB4593175
+                           [09]: KB4598481
+                           [10]: KB5012599
+                           [11]: KB5006753
+                           [12]: KB5007273
+                           [13]: KB5011352
+                           [14]: KB5011651
+                           [15]: KB5005699
+Network Card(s):           3 NIC(s) Installed.
+                           [01]: Intel(R) Wireless-AC 9462
+                                 Connection Name: Wi-Fi
+                                 DHCP Enabled:    Yes
+                                 DHCP Server:     192.168.29.1
+                                 IP address(es)
+                                 [01]: 192.168.29.10
+                                 [02]: fe80::9c41:82dc:cb68:7d8c
+                                 [03]: 2405:201:d01f:a90c:8d61:282f:40c8:3594
+                                 [04]: 2405:201:d01f:a90c:9c41:82dc:cb68:7d8c
+                           [02]: VirtualBox Host-Only Ethernet Adapter
+                                 Connection Name: VirtualBox Host-Only Network
+                                 DHCP Enabled:    No
+                                 IP address(es)
+                                 [01]: 192.168.56.1
+                                 [02]: fe80::e5d2:7842:6ca2:ffab
+                           [03]: VirtualBox Host-Only Ethernet Adapter
+                                 Connection Name: VirtualBox Host-Only Network #2
+                                 DHCP Enabled:    No
+                                 IP address(es)
+                                 [01]: 192.168.99.1
+                                 [02]: fe80::15d7:cdba:45c4:8377
+Hyper-V Requirements:      VM Monitor Mode Extensions: Yes
+                           Virtualization Enabled In Firmware: Yes
+                           Second Level Address Translation: Yes
+                           Data Execution Prevention Available: Yes
+
+
+Virtualization Enabled In Firmware: Yes
+
+
+2/ https://kubernetes.io/docs/tasks/tools/install-kubectl-windows/  -> click "Install kubectl binary with curl on Windows"
+
+3/ download minikube exe for windows.
+
+https://github.com/kubernetes/minikube/releases -> download "minikube-windows-amd64.exe" -> rename to "minikube.exe"
+
+
+4/ keep both exe files for kubectl and minikube in a folder under c:/
+
+C:\minikube
+
+add this above path to edit envirnment variables and path
+
+5/ Download and install Oracle Virtual box.
+https://www.virtualbox.org/wiki/Downloads  -> click "Windows hosts"
+
+6/ start the virtual box and in cmd type
+
+minikube start --driver=virtualbox
+
+
+
 PODS
 ===============================
 - kubernetes ultimate aim is to deploy applications in the form of containers on a set of machines that are configured as worker nodes in a cluster. however k8s does not deploy containers directly on node, containers are encapsulated in kubernets object known as PODs.
@@ -16,8 +123,54 @@ pod/mosquito created
 $ kubectl run bee --image=nginx --restart=Never --dry-run=client -o yaml > bee-pod.yaml
 
 
+$ kubectl run -n core-system borg1 --image=busybox --restart=Always --labels="platform=prod" --env system=borg -o yaml --dry-run=client -- /bin/sh -c "echo borg.running... && sleep 3600" > /home/ubuntu/pod.yaml
+
+
+
+$ kubectl run -n workers worker --image=busybox --labels="company=acme,speed=fast,type=async" -- /bin/sh -c "echo working... && sleep 3600"
+
+
+- Define a command and arguments when you create a Pod 
+
+- *** Note: The command field corresponds to ENTRYPOINT in some container runtimes and args field corresponds to COMMAND defined in Docker image
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: command-demo
+  labels:
+    purpose: demonstrate-command
+spec:
+  containers:
+  - name: command-demo-container
+    image: debian
+    command: ["printenv"]
+    args: ["HOSTNAME", "KUBERNETES_PORT"]
+  restartPolicy: OnFailure
+
+
+
+- Use environment variables to define arguments
+
+env:
+- name: MESSAGE
+  value: "hello world"
+command: ["/bin/echo"]
+args: ["$(MESSAGE)"]
+
+
+- Run a command in a shell
+
+command: ["/bin/sh"]
+args: ["-c", "while true; do echo hello; sleep 10;done"]
+
+
+
+
 - to know the Pod configs help. 
 $ kubectl explain pod --recursive | less
+$ kubectl explain pod.spec.terminationGracePeriodSeconds 
+
 
 $ kubectl explain pod --recursive | grep -A5 tolerations
 tolerations       <[]Object>
@@ -50,12 +203,15 @@ create pod
 - kubectl create -f <pod-definition yml file name>
 - kubectl run <pod_name> --image <image_name>  // pod name and container name will be the given <pod_name>
 
+
+
 describe pod and look at its containers
 - kubectl describe pod <pod_name>
 
 
-create a manifest file using dryrun flag, dry-run=client allows not create the pod instead redirect the definition to yaml file.
+create a manifest file using dryrun flag, --dry-run=client OR --dry-run allows not create the pod instead redirect the definition to yaml file.
 - kubectl run redis --image=redis123 --dry-run=client -o yaml > redis-pod-definition.yaml
+- kubectl run redis --image=redis123 --dry-run -o yaml > redis-pod-definition.yaml      *** save keystroke for the exam.
 - kubectl apply -f <redis-pod-definition.yaml>  // create the pod using apply
 
 edit and rerun pod creation
@@ -124,8 +280,14 @@ Manifest file
 
 
 
+
+
+
+
 =====================================================================================================
-ReplicaSets
+
+::ReplicaSets::
+
 =====================================================================================================
 - Controllers are the brain behind kubernetes, these are processes that monitor kubernetes objects and responds accordingly.
 - one of such controller is 'Replication Controller'
@@ -547,7 +709,7 @@ https://kubernetes.io/docs/concepts/policy/resource-quotas/
 
 - Resource quotas are a tool for administrators to address this concern.
 
--Different teams work in different namespaces. 
+- Different teams work in different namespaces. 
 
 - The administrator creates one ResourceQuota for each namespace.
 
@@ -1746,7 +1908,7 @@ touch: /tmp/test-file: Read-only file system
 
 ====================================================================
 
-Service Accounts
+:: Service Accounts ::
 
 ====================================================================
 
@@ -2505,7 +2667,7 @@ tolerations:
 Node Selectors
 
 =============================================================================
-- by default any Pods can get scheduled to any nodes. so, even if there are few nodes with higher harware resources allocated, a POD (ex: data processor app) if it requires high resources, ends up being scheduled to any node, whcih is not desired.
+- by default any Pods can get scheduled to any nodes. so, even if there are few nodes with higher hardware resources allocated, a POD (ex: data processor app) if it requires high resources, ends up being scheduled to any node, whcih is not desired.
 
 - 2 ways to achive this:
 	- Node Selector - simple and easire method.
@@ -2567,7 +2729,9 @@ nginx    1/1       Running   0          13s    10.200.0.4   worker0
 
 Node Selector - Limitations
 ----------------------------
-- used a single label and nodeSelector to achieve simple goal, in case of complex requirements like: a) place the Pod on a Large OR Medium nodes, b) Place the Pod on any nodes that are not small.
+- used a single label and nodeSelector to achieve simple goal, in case of complex requirements like: 
+a) place the Pod on a Large OR Medium nodes, 
+b) Place the Pod on any nodes that are not small.
 
 - These complex usecase can not achieved by Node Selector, use Node Afinity
 
@@ -2909,6 +3073,7 @@ $ kubectl -n elastic-stack get pod app -o yaml > app-pod.yaml
 Observability in Kubernetes
 
 ==================================================================================
+
 - Readiness and Liveness Probes, Logging and Monitoring concepts.
 
 POD Status
@@ -3072,14 +3237,14 @@ readinessProbe:
 
 ex:
 ports:
-    - name: liveness-port
-      containerPort: 8080
-      hostPort: 8080
+- name: liveness-port
+  containerPort: 8080
+  hostPort: 8080
 
-    livenessProbe:
-      httpGet:
-        path: /healthz
-        port: liveness-port
+livenessProbe:
+  httpGet:
+	path: /healthz
+	port: liveness-port
 
 
 
@@ -3428,6 +3593,10 @@ $ kubectl logs <pod_name>  // if single container pod. use -f option for tail.
 
 $ kubectl logs <pod_name> <container_name>   // if multi container pod. use -f option for tail. passing only the pod_name will throw error.
 
+OR
+$ kubectl logs <pod_name> -c <container_name>
+OR
+$ kubectl logs <pod_name> --container <container_name>
 
 event-simulator.yaml
 --------------------
@@ -4016,6 +4185,97 @@ $ kubectl top pod -n kube-system --containers -l k8s-app=kube-dns
 POD                       NAME      CPU(cores)   MEMORY(bytes)   
 coredns-74ff55c5b-h7f7t   coredns   2m           8Mi             
 coredns-74ff55c5b-kk4cw   coredns   3m           8Mi
+
+
+
+
+==========================================================================================================
+
+Port Forwarding to Access Applications in a Cluster
+
+==========================================================================================================
+https://kubernetes.io/docs/tasks/access-application-cluster/port-forward-access-application-cluster/
+
+- use kubectl port-forward to connect to a MongoDB server running in a Kubernetes cluster. This type of connection can be useful for database debugging
+
+
+1. Create a Deployment that runs MongoDB:
+
+kubectl apply -f https://k8s.io/examples/application/mongodb/mongo-deployment.yaml
+
+kubectl get deployment
+kubectl get replicaset
+kubectl get pods
+
+2. Create a Service to expose MongoDB on the network:
+
+kubectl apply -f https://k8s.io/examples/application/mongodb/mongo-service.yaml
+
+kubectl get service mongo
+
+3. Verify that the MongoDB server is running in the Pod, and listening on port 27017:
+
+# Change mongo-75f59d57f4-4nd6q to the name of the Pod
+kubectl get pod mongo-75f59d57f4-4nd6q --template='{{(index (index .spec.containers 0).ports 0).containerPort}}{{"\n"}}'
+
+
+
+- Forward a local port to a port on the Pod
+- kubectl port-forward allows using resource name, such as a pod name, to select a matching pod to port forward to.
+
+# Change mongo-75f59d57f4-4nd6q to the name of the Pod
+kubectl port-forward mongo-75f59d57f4-4nd6q 28015:27017
+
+or
+
+kubectl port-forward pods/mongo-75f59d57f4-4nd6q 28015:27017
+
+or
+
+kubectl port-forward deployment/mongo 28015:27017
+
+or 
+
+kubectl port-forward replicaset/mongo-75f59d57f4 28015:27017
+
+or
+
+kubectl port-forward service/mongo 28015:27017
+
+
+Any of the above commands works. The output is similar to this:
+Forwarding from 127.0.0.1:28015 -> 27017
+Forwarding from [::1]:28015 -> 27017
+
+
+Note: kubectl port-forward does not return. To continue with the exercises, you will need to open another terminal.
+
+
+- Start the MongoDB command line interface:
+mongosh --port 28015
+
+- At the MongoDB command line prompt, enter the ping command:
+db.runCommand( { ping: 1 } )
+
+A successful ping request returns:
+{ ok: 1 }
+
+
+
+- Optionally let kubectl choose the local port 
+
+kubectl port-forward deployment/mongo :27017
+
+The kubectl tool finds a local port number that is not in use (avoiding low ports numbers, because these might be used by other applications). The output is similar to:
+
+Forwarding from 127.0.0.1:63753 -> 27017
+Forwarding from [::1]:63753 -> 27017
+
+
+- *** Connections made to local port 28015 are forwarded to port 27017 of the Pod that is running the MongoDB server. With this connection in place, you can use your local workstation to debug the database that is running in the Pod.
+
+
+
 
 
 
@@ -4724,7 +4984,9 @@ status:
 
 - The activeDeadlineSeconds and ttlSecondsAfterFinished are useful for automatically terminating and deleting Jobs.
 
-- The Pods will remain until you delete them or the Job associated with them. Setting a Job's ttlSecondsAfterFinished can free you from manually cleaning up the Pods.
+- activeDeadlineSeconds: way to terminate a Job is by setting an active deadline. Do this by setting the .spec.activeDeadlineSeconds field of the Job to a number of seconds. The activeDeadlineSeconds applies to the duration of the job, no matter how many Pods are created. Once a Job reaches activeDeadlineSeconds, all of its running Pods are terminated and the Job status will become type: Failed with reason: DeadlineExceeded.
+
+- ttlSecondsAfterFinished: The Pods will remain until you delete them or the Job associated with them. Setting a Job's ttlSecondsAfterFinished can free you from manually cleaning up the Pods.
 
 
 
@@ -4882,6 +5144,68 @@ $ watch "kubectl get all"  // watch linux command runs the given expression ever
 
 - *** Kubernetes Job will continously attempt to run the job execution untill the job returned success i.e. exit status 0
 - ** BUT kubernets has a default limit untill when it will keep on attempting before failing the job (backoffLimit).
+
+
+- There are situations where you want to fail a Job after some amount of retries due to a logical error in configuration etc. To do so, set .spec.backoffLimit to specify the number of retries before considering a Job as failed. The back-off limit is set by default to 6. Failed Pods associated with the Job are recreated by the Job controller with an exponential back-off delay (10s, 20s, 40s ...) capped at six minutes. 
+
+
+- The activeDeadlineSeconds applies to the duration of the job, no matter how many Pods are created. Once a Job reaches activeDeadlineSeconds, all of its running Pods are terminated and the Job status will become type: Failed with reason: DeadlineExceeded.
+
+- Note that a Job's .spec.activeDeadlineSeconds takes precedence over its .spec.backoffLimit. Therefore, a Job that is retrying one or more failed Pods will not deploy additional Pods once it reaches the time limit specified by activeDeadlineSeconds, even if the backoffLimit is not yet reached.
+
+
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pi-with-timeout
+spec:
+  backoffLimit: 5
+  activeDeadlineSeconds: 100
+  template:
+    spec:
+      containers:
+      - name: pi
+        image: perl
+        command: ["perl",  "-Mbignum=bpi", "-wle", "print bpi(2000)"]
+      restartPolicy: Never
+
+
+
+Clean up finished jobs automatically
+------------------------------------
+- Finished Jobs are usually no longer needed in the system. Keeping them around in the system will put pressure on the API server. 
+
+- TTL mechanism for finished Jobs: 
+
+- way to clean up finished Jobs (either Complete or Failed) automatically is to use a TTL mechanism provided by a TTL controller for finished resources, by specifying the .spec.ttlSecondsAfterFinished field of the Job.
+
+- When the TTL controller cleans up the Job, it will delete the Job cascadingly, i.e. delete its dependent objects, such as Pods, together with the Job. 
+
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pi-with-ttl
+spec:
+  ttlSecondsAfterFinished: 100
+  template:
+    spec:
+      containers:
+      - name: pi
+        image: perl
+        command: ["perl",  "-Mbignum=bpi", "-wle", "print bpi(2000)"]
+      restartPolicy: Never
+	  
+	  
+- The Job pi-with-ttl will be eligible to be automatically deleted, 100 seconds after it finishes.
+- *** If the field is set to 0, the Job will be eligible to be automatically deleted immediately after it finishes.
+
+
+
+
+
+
 
 $ kubectl logs math-add-job-ld87pn
 5
@@ -5045,6 +5369,8 @@ CronJobs
 ==========================================================================
 
 - A cronjob is a job that can be scheduled. Just like cron tab in Linux
+
+- A cronjob is a wrapper on top of Job
 
 - Say for example you have a job that generates a report and sends an email. the kind: Job runs instantly. Instead you could create a cronjob (kind: CronJob) to schedule and run it periodically as per the given cron expression
 
@@ -5381,13 +5707,33 @@ spec:
 	- The IP address that you choose must be a valid IPv4 or IPv6 address from within the service-cluster-ip-range CIDR range that is configured for the API server. If you try to create a Service with an invalid clusterIP address value, the API server will return a 422 HTTP status code to indicate that there's a problem
 
 
+
+
+
+
 =======================================================================================
 
-Ingress Resource and Ingress controller
+::Ingress Resource and Ingress controller::
 
 =======================================================================================
 
 - read the info detailed in Ingress section in KodeKloud-Kubernetes+-CKAD.pdf to understand the pain points of using NodePort/LoadBalancer service types in exposing the applications running on pods via deployments.
+
+- A Kubernetes Ingress object is a resource for managing external access to services within a cluster. 
+- Typically Ingress resources are used to expose HTTP(S) routes. An Ingress resource can provide any of the following:
+	- Load balancing
+	- SSL termination
+	- HTTP Virtual Hosting (routing based on the domain name in a request)
+	- HTTP URL path-based routing
+	
+- Using an Ingress resource requires an Ingress Controller to be installed and running in the Kubernetes cluster. 
+- Some of the most popular ingress controllers available include:
+	- NGINX
+	- Traefik
+	- Haproxy
+	- Envoy
+	- In addition, some service meshes, such as Istio, provide Ingress controllers.
+
 
 - Ingress helps your users access your application using a single Externally accessible URL, that you can configure to route to different services within your cluster based on the URL path, at the same time terminate TLS.
 
@@ -5949,6 +6295,321 @@ Events:       <none>
 
 
 
+CloudAcademy Exercise:
+-----------------------------
+In this lab, the NGINX Ingress Controller has been installed in the Kubernetes cluster.
+
+1. To verify the that NGINX Ingress Controller has been installed and is running, enter the following in the terminal:
+
+$ kubectl get all --namespace ingress-nginx
+
+NAME                                            READY   STATUS      RESTARTS   AGE
+pod/ingress-nginx-admission-create-z4tfc        0/1     Completed   0          5m46s
+pod/ingress-nginx-admission-patch-cjwgn         0/1     Completed   0          5m46s
+pod/ingress-nginx-controller-748d8ff6c7-g78h2   1/1     Running     0          5m46s
+
+NAME                                 TYPE           CLUSTER-IP      EXTERNAL-IP                                                                     PORT(S)                      AGE
+ingress-nginx-controller             LoadBalancer   10.98.212.223   89cbab3f.elb.us-west-2.amazonaws.com   80:31757/TCP,443:32151/TCP   8m11s
+ingress-nginx-controller-admission   ClusterIP      10.109.12.254   <non                                   443/TCP            			8m11s
+
+NAME                                       READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/ingress-nginx-controller   1/1     1            1           6m10s
+
+NAME                                                  DESIRED   CURRENT   READY   AGE
+replicaset.apps/ingress-nginx-controller-748d8ff6c7   1         1         1       5m46s
+
+NAME                                       COMPLETIONS   DURATION   AGE
+job.batch/ingress-nginx-admission-create   1/1           43s        6m9s
+job.batch/ingress-nginx-admission-patch    1/1           43s        6m9s
+
+
+Note: Ensure that you see a Pod beginning with pod/ingress-nginx-controller- with a Status of Running before proceeding to the next instruction. This can take up to a minute after lab setup has completed.
+
+
+Observe the EXTERNAL-IP field on the service/ingress-nginx-controller resource. The value is the DNS name of a AWS Network Load Balancer that was created when the Ingress controller was installed in the cluster.
+
+service/ingress-nginx-controller             LoadBalancer   10.98.212.223   aeee9de2ab10c4772b6df940d0dbc751-47a2e88d89cbab3f.elb.us-west-2.amazonaws.com
+
+
+
+2. Copy the value of the EXTERNAL-IP field and visit it in a new web browser tab.
+
+You will see a 404 Not Found page displayed:
+
+- No Ingress resources have been created in this cluster yet. The Ingress controller responds to all requests that it doesn't have a rule for by sending the request to the Default backend. 
+- When using the NGINX Ingress controller, this results in the 404 page you see.
+
+
+3. To create a Deployment and Service, enter the following in the terminal:
+
+cat << EOF | kubectl apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: blue-app
+spec:
+  selector:
+    matchLabels:
+      app: blue-app
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: blue-app
+    spec:
+      containers:
+      - name: blue-app
+        image: public.ecr.aws/cloudacademy-labs/cloudacademy/labs/k8s-ingress-app:f9a36c8
+        env:
+        - name: COLOR
+          value: '#A7C7E7'
+        ports:
+        - containerPort: 8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: blue-app
+spec:
+  selector:
+    app: blue-app
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8000
+EOF
+
+
+- This command uses the heredoc functionality of the Bash shell to pipe a multiline string, in this case a Kubernetes manifest, to the kubectl tool.
+
+- The manifest defines a Deployment and a Service. The deployment is for an application that will display a blank page with the background color set to the value of the COLOR environment variable. The Deployment's container listens on port 8000. The Service translates port 80 to port 8000 and provides a way of accessing the application inside the cluster. Also note that the Deployment has replicas set to 2.
+
+$ kubectl get pod -l app=blue-app
+NAME                        READY   STATUS    RESTARTS   AGE
+blue-app-79689c4c98-h4h7p   1/1     Running   0          85s
+blue-app-79689c4c98-sswq9   1/1     Running   0          85s
+
+$ kubectl get svc blue-app 
+NAME       TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)   AGE
+blue-app   ClusterIP   10.96.142.83   <none>        80/TCP    2m9s
+
+
+4. To create a second Deployment and Service, enter the following:
+
+cat << EOF | kubectl apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: red-app
+spec:
+  selector:
+    matchLabels:
+      app: red-app
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: red-app
+    spec:
+      containers:
+      - name: red-app
+        image: public.ecr.aws/cloudacademy-labs/cloudacademy/labs/k8s-ingress-app:f9a36c8
+        env:
+        - name: COLOR
+          value: '#FAA0A0'
+        ports:
+        - containerPort: 8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: red-app
+spec:
+  selector:
+    app: red-app
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8000
+EOF
+
+
+$ kubectl get po -l app=red-app
+NAME                       READY   STATUS    RESTARTS   AGE
+red-app-55cbdf7487-bgr7b   1/1     Running   0          39s
+red-app-55cbdf7487-kkpqq   1/1     Running   0          39s
+
+
+$ kubectl get svc red-app 
+NAME      TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)   AGE
+red-app   ClusterIP   10.98.99.153   <none>        80/TCP    46s
+
+
+This Deployment is identical to the first, except for two changes:
+
+- blue-app has been replaced with red-app
+- The value of the COLOR environment variable is different
+
+
+$ kubectl get pod,service
+NAME                            READY   STATUS    RESTARTS   AGE
+pod/blue-app-79689c4c98-h4h7p   1/1     Running   0          5m11s
+pod/blue-app-79689c4c98-sswq9   1/1     Running   0          5m11s
+pod/red-app-55cbdf7487-bgr7b    1/1     Running   0          104s
+pod/red-app-55cbdf7487-kkpqq    1/1     Running   0          104s
+
+NAME                 TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)   AGE
+service/blue-app     ClusterIP   10.96.142.83   <none>        80/TCP    5m11s
+service/kubernetes   ClusterIP   10.96.0.1      <none>        443/TCP   155d
+service/red-app      ClusterIP   10.98.99.153   <none>        80/TCP    104s
+
+
+
+6. To create an Ingress resource, enter the following:
+
+cat << EOF | kubectl apply -f -
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: lab-ingress
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /blue
+        pathType: Prefix
+        backend:
+          service:
+            name: blue-app
+            port:
+              number: 80
+      - path: /red
+        pathType: Prefix
+        backend:
+          service:
+            name: red-app
+            port:
+              number: 80
+EOF
+
+
+- The Ingress manifest consists of one http rule with two path configurations. The paths direct traffic to either the blue or red application, depending on whether the URL is blue or red.
+
+- *** Observe that the Ingress has a rewrite annotation on it. This means requests will be rewritten to the root HTTP path (/) before the request is routed to the application's Service.
+
+
+7. Return to your browser tab for the Ingress DNS and add /blue at the end of the URL in the address bar.
+
+You will see a blue web page displayed.
+
+http://a5e5d537a77a94af3b3f0f5d1a630180-a08072c2ff73de2d.elb.us-west-2.amazonaws.com/blue
+
+http://a5e5d537a77a94af3b3f0f5d1a630180-a08072c2ff73de2d.elb.us-west-2.amazonaws.com/red
+
+
+8. To verify that the Ingress will route to the red application, change the end of the URL in your address bar from /blue to /red.
+
+You will see a red web page.
+
+- This is an example of routing based on HTTP paths. Path-based routing can be particularly useful when hosting an application consisting of microservices in Kubernetes. You can use it to control which services inside the cluster respond to specific HTTP paths.
+
+
+- Also be aware that you can have multiple Ingress resources in a cluster. You can group related endpoints together in one Ingress resource so that the system is easier to understand and reason about.
+
+
+9. To view the logs of the NGINX ingress controller, enter the following:
+
+$ kubectl logs -l app.kubernetes.io/name=ingress-nginx --namespace ingress-nginx
+
+
+49.37.177.247 - - [27/Feb/2022:01:07:54 +0000] "GET /blue HTTP/1.1" 304 0 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36" 562 0.003 [default-blue-app-80] [] 192.168.23.129:8000 0 0.000 304 47a0a6ba19ad2d5fe3952c2aa807084b
+
+
+49.37.177.247 - - [27/Feb/2022:01:07:42 +0000] "GET /red HTTP/1.1" 304 0 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36" 587 0.002 [default-red-app-80] [] 192.168.203.133:8000 0 0.004 304 6de9426fda6e192479eabd893ef524cb
+
+
+
+10. To change the Ingress to route based on hostname, enter the following:
+
+cat << EOF | kubectl apply -f -
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: lab-ingress
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+spec:
+  rules:
+  - host: blue.example.com
+    http:
+      paths:
+      - pathType: Prefix
+        path: /
+        backend:
+          service:
+            name: blue-app
+            port:
+              number: 80
+  - host: red.example.com
+    http:
+      paths:
+      - pathType: Prefix
+        path: /
+        backend:
+          service:
+            name: red-app
+            port:
+              number: 80
+EOF
+
+
+- This Ingress manifest has two Ingress rules, one for each host.
+
+- Routing requests by hostname is often called Virtual Hosting or Name Based Routing. It's a feature of most web servers and allows multiple websites to be hosted together on the same infrastructure.
+
+
+11. To test that the hostname based routing works, enter the following commands:
+
+load_balancer_dns=$(kubectl -n ingress-nginx get service ingress-nginx-controller -o jsonpath={.status.loadBalancer.ingress[0].hostname})
+
+$ curl --header "Host: blue.example.com" http://$l_b_dns
+
+<html><head><title>Application</title></head><body style="background-color:#A7C7E7"></body></html>
+
+
+$ curl --header "Host: red.example.com" http://$l_b_dns
+
+<html><head><title>Application</title></head><body style="background-color:#FAA0A0"></body></html>
+
+
+
+- These commands use the curl command line utility to send HTTP requests with host headers set to the load balancer used by the Ingress resource. Setting the host header lets you see how a HTTP endpoint responds to requests to different hostnames. 
+- In a non-lab environment, you would set up real DNS names pointing to your cluster, and you would not need to set the host header manually.
+
+
+$ kubectl get svc -n ingress-nginx ingress-nginx-controller
+
+NAME                       TYPE           CLUSTER-IP      EXTERNAL-IP                                                                     PORT(S)                      AGE
+ingress-nginx-controller   LoadBalancer   10.100.13.196   a5e5d537a77a94af3b3f0f5d1a630180-a08072c2ff73de2d.elb.us-west-2.amazonaws.com   80:30254/TCP,443:30267/TCP   22m
+
+
+
+$ kubectl get svc -n ingress-nginx ingress-nginx-controller -o yaml
+
+apiVersion: v1
+kind: Service
+..
+..
+  type: LoadBalancer
+status:
+  loadBalancer:
+    ingress:
+    - hostname: a5e5d537a77a94af3b3f0f5d1a630180-a08072c2ff73de2d.elb.us-west-2.amazonaws.com
+
+
 
 
 
@@ -5956,7 +6617,7 @@ Events:       <none>
 
 ===============================================================================
 
-Network Policy
+::Network Policy::
 
 ===============================================================================
 
@@ -6005,7 +6666,7 @@ Network Security
 
 -  under the spec section, we will first move the pod selector to apply this policy to the db pod and then the network rule.
 
-- this policy applied on DB Pods, ingress rule from api-pod on port 3306, rest all traffics will be blocked,.
+- *** this policy applied on DB Pods, ingress rule from api-pod on port 3306, rest all traffics will be blocked,.
 
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -6355,7 +7016,7 @@ spec:
 
 2. Create a pod in the default namespace and run /bin/sh in it:
 
-$ kubectl run busybox --image=busybox --rm -it /bin/sh
+$ kubectl run busybox --image=busybox --rm -it -- /bin/sh
 
 3. Use the wget command to connect to https://google.com:
 
@@ -6442,9 +7103,13 @@ The request will never succeed.
 
 
 
+
+
+
+
 ==========================================================================================
 
-Persistent volumes
+::Persistent volumes::
 
 ==========================================================================================
 
@@ -6675,7 +7340,12 @@ mysql
 
 Volume Types in Kubernetes
 ----------------------------------
-- various storage options available. a/ hostPath, b/ configMap, c/ secret, d/ awsElasticBlockStore, e/ emptyDir
+- various storage options available. 
+	a/ hostPath, 
+	b/ configMap, 
+	c/ secret, 
+	d/ awsElasticBlockStore,
+	e/ emptyDir
 
 - hostPath
 	- hostPath option for storage will be allocated on node where the POD is running, not for production.
@@ -7111,9 +7781,9 @@ A Note on Namespaces
 
 
 
-Storage Object in Use Protection 
+Storage Object in-Use Protection 
 ------------------------------------
-- The purpose of the Storage Object in Use Protection feature is to ensure that PersistentVolumeClaims (PVCs) in active use by a Pod and PersistentVolume (PVs) that are bound to PVCs are not removed from the system, as this may result in data loss.
+- The purpose of the Storage Object in-Use Protection feature is to ensure that PersistentVolumeClaims (PVCs) in active use by a Pod and PersistentVolume (PVs) that are bound to PVCs are not removed from the system, as this may result in data loss.
 
 - PVC is in active use by a Pod when a Pod object exists that is using the PVC.
 
@@ -7522,6 +8192,7 @@ CloudAcademy Exercise:
 --------------------------
 # Create namespace
 kubectl create namespace persistence
+
 # Set namespace as the default for the current context
 kubectl config set-context $(kubectl config current-context) --namespace=persistence
 
@@ -7964,7 +8635,7 @@ Headless Service:
 	
 	- the web app can now use the dns entry for the master pod (mysql-0.mysql-h.default.svc.cluster.local), this dns entry will always point to the master pod of mysql deployment.
 	
-	- create headless service by explicitly specifying "None" for the cluster IP (.spec.clusterIP).
+	- create headless service by explicitly specifying "None" for the type (.spec.type).
 	
 	- "Headless" (without a cluster IP) Services are also assigned a DNS A or AAAA record, depending on the IP family of the service, for a name of the form my-svc.my-namespace.svc.cluster-domain.example. Unlike normal Services, this resolves to the set of IPs of the pods selected by the Service. Clients are expected to consume the set or else use standard round-robin selection from the set.
 	
@@ -9426,8 +10097,10 @@ abb5590f3e62        webapp-color:lite   "python app.py"     27 seconds ago      
 
 
 
+=======================================================================================================
 
-Authentication, Authorization and Admission Control
+::Authentication, Authorization and Admission Control::
+
 =======================================================================================================
 
 - Kubernetes becoming the goto platform for hosting production grade application, securing the kubernetes cluster is very important.
@@ -9473,7 +10146,7 @@ Authorization:
 
 ===================================================================================================
 
-Authentication in Kubernetes cluster
+::Authentication in Kubernetes cluster::
 
 ===================================================================================================
 
@@ -9790,8 +10463,6 @@ users:
 				ldZbWVYN2x3TkExcEpjbVhBVWV3NjM0TGtJRXRkClJ5dnBVWE96K1dhOVg4TG9TQnh0RXdnMUE2NWhXcElte
 
 
-
-
 - sample custom kubeconfig:
 
 $ pwd
@@ -9907,7 +10578,7 @@ dev-user@test-cluster-1
 
 ==============================================================================================
 
-Authorization
+::Authorization::
 
 ==============================================================================================
 
@@ -10424,7 +11095,7 @@ $ kubectl create -f cluster-admin-role-binding.yaml
 
 ===================================================================================
 
-Admission Controllers
+::Admission Controllers::
 
 ===================================================================================
 
@@ -10545,7 +11216,11 @@ Note: Once you update kube-apiserver yaml then please wait few mins for the kube
 
 
 
-Validating and Mutating Admission Controllers
+
+===================================================================================================
+
+::Validating and Mutating Admission Controllers::
+
 ===================================================================================================
 
 - 2 types of admission controller. Validating Admission Controllers and Mutating Admission Controllers
@@ -10581,8 +11256,14 @@ ex: "NamespaceAutoProvision" Mutating admission controller is invoked firts foll
 
 
 
-Custom Admission Controller (Dynamic Admission Control)
-====================================================================
+
+
+=====================================================================================================
+
+::Custom Admission Controller (Dynamic Admission Control)::
+
+=====================================================================================================
+
 - How we can configure our own admission controller with our own validation or mutation logic.
 
 - admission plugins can be developed as extensions and run as webhooks configured at runtime.
@@ -10952,8 +11633,412 @@ Error from server: error when creating "pod-with-conflict.yaml": admission webho
 
 
 
+CloudAcademy Exercise:
+---------------------------------------------------
 
 
+- All requests sent to Kubernetes go through the Kubernetes API, which is hosted by the Kubernetes API Server. When you use kubectl to create a Deployment, kubectl sends a request to the API Server to create it. The Deployment object gets stored in the cluster's data store (etcd) once the request is accepted and the cluster controllers begin to create the Deployment's Pods. 
+
+- However, before the request is accepted, the API Server must allow it through its three layers of access control depicted below:
+
+
+	- Authentication: Requests sent to the API server are authenticated to prove the identity of the requester, be it a normal user or a service account, and are rejected otherwise.
+
+	- Authorization: The action specified in the request must be in the list of actions the authenticated user is allowed to perform or it is rejected.
+
+	- Admission Control: Authorized requests must then pass through all of the admission controllers configured in the cluster (excluding read-only requests) before any action is performed.
+	
+	
+1. Use kubectl to get the Pods in the default Namespace:
+
+No resources found in default namespace
+
+
+2. Re-issue the same command but with log level 6 verbosity (--v=6):
+
+$ kubectl get pods --v=6
+
+I0227 10:27:32.029083    2191 loader.go:372] Config loaded from file:  /home/ubuntu/.kube/config
+I0227 10:27:32.052603    2191 round_trippers.go:454] GET https://10.0.0.100:6443/api/v1/namespaces/default/pods?limit=500 200 OK in 12 milliseconds
+No resources found in default namespace.	
+	
+- The log Config loaded from file indicates the configuration file used by kubectl. 
+
+- This file is referred to as the kubeconfig file and is in the default location (.kube/config in the user's home directory). 
+
+
+3. Display the contents of the kubeconfig file:
+
+cat /home/ubuntu/.kube/config
+
+
+apiVersion: v1
+kind: Config
+preferences: {}
+current-context: kubernetes-admin@kubernetes
+clusters:
+- cluster:
+    certificate-authority-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUM1ekNDQWMrZ0F3SUJBZ0lCQURBTkJna3Foa2lHOXcwQkFRc0ZBREFWTVJNd0VRWURWUVFERXdwcmRXSmwKY201bGRHVnpNQjRYRFRJeE1Ea3lOREF3TkRjeU1Gb1hEVE14TURreU1qQXdORGN5TUZvd0ZURVRNQkVHQTFVRQpBeE1LYTNWaVpYSnVaWFJsY3pDQ0FTSXdEUVlKS29aSWh2Y05BUUVCQlFBRGdnRVBBRENDQVFvQ2dnRUJBTVJJCjdXQStldlVIUTRQYUo1bUhGVDRHT08wQzRoelFnaUNGVGRmdVdrVEVhVHdkVHhaSzV2MWRlMlNXeHlmY2FGM20KcE9hRGZaSU5PdUc1TFNzTWhNNjZ2bnM3Y3FkWmdFZDdvSEJJcDBUKzUyc0crN2l5bUVJWFVTYjFlTndzRlBLZAp6MmdRNGs4emFNVFhyaDgyb3lnSlJIeCtHSks3bWJrOGJ5NEh6dUx2SEZFN3FDT3VCa2o0TVVOQkpYQUx6YVZ6CkJBZU1GZG5NdDJpc1U5bEIvaUhDVWRIcG1PYVpPMUh5MHVKNzRTdUJLZzdOWjJicFJUTGpHSzJwL0dqS0NQWHkKVmJudDRydmoreThLMk9sLzZpVGVWTU5VOFdidWJIdEZTbVoxNDZEcFpKd1RtYmQ5TGM0RnBkTC9xd0dybmNvQgo4Rk9SU3BsV1B2MFdINnp0TFdjQ0F3RUFBYU5DTUVBd0RnWURWUjBQQVFIL0JBUURBZ0trTUE4R0ExVWRFd0VCCi93UUZNQU1CQWY4d0hRWURWUjBPQkJZRUZJKzN2SzdHbTNTbHIwOGVuMkVhZFVyc3hwSFFNQTBHQ1NxR1NJYjMKRFFFQkN3VUFBNElCQVFDRlYrRXZLVzY1cGNGNFJSRGNGdnprQ1RZV29DS3U3T0o3Q3FhTWF2NVIycHR3MTVVcwpub0NHcmlvTElpRkw1Vit1c3N6SWE0Vk5iWlRDZXB0ZmVCRTdlQTNjSmtXY1FQRVdNeWJobTNibTRJbHIzOHkxCk5OdGZTMFJ3UDNlNDFEZmRRTmFFSkR1dmFSSDYyejd5ZFhPSlNVR0lwUHVBRFZSVWRaUXd3S3NyWmthN0xSSzYKV213WEk2c050eE8zSGMycCtNV09pdjA1bjQ5VjVSbDlHVW1WN0d5VnBNRndzNDhaM3l5TU03Q1EwUWxiVWE1WApYL2lHUGxKS0U0cS8vUC9XLysxT2R6bmFIckxHMEJGS2cxV29UN0RFb3owMlZTMytMRG8zZ1RRTzdLNXlLU3ZWCkExTnNYMzYvZUpIeEI1U21uYmlEeFJrcHJQSy9CWUd6d2R2WgotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+    server: https://10.0.0.100:6443
+  name: kubernetes
+contexts:
+- context:
+    cluster: kubernetes
+    user: kubernetes-admin
+  name: kubernetes-admin@kubernetes
+users:
+- name: kubernetes-admin
+  user:
+    client-certificate-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURJVENDQWdtZ0F3SUJBZ0lJVFB2THp2cGZyQWN3RFFZSktvWklodmNOQVFFTEJRQXdGVEVUTUJFR0ExVUUKQXhNS2EzVmlaWEp1WlhSbGN6QWVGdzB5TVRBNU1qUXdNRFEzTWpCYUZ3MHlNakE1TWpRd01EUTNNakphTURReApGekFWQmdOVkJBb1REbk41YzNSbGJUcHRZWE4wWlhKek1Sa3dGd1lEVlFRREV4QnJkV0psY201bGRHVnpMV0ZrCmJXbHVNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXplMjdVRnhzdE11dmlicHcKM3h2MXJ1R1k3Q1VGL2Q4bm10cW9TR1A3aE5tN01WeTVBaWNwYjFDMmwrY0czMGdZR3pRTzlWV21GMzMzMXNjcwptcUkxdyttRklhcVRMbzUrd1V1Y2ZCSFdLMXRMUkRKc0hndjdRZTBKZGFoR0I4a3A4c0xvUk5IWjAyVUp3OFBlCmNmd256TGZ0QmpKajlKUk5RT09FUlJESkVlRlRIenhDWHhMc0ovUUhpZi9OM2VaemlNY2dtamxVM292NVA3RUYKbCtXN0R2UENBTzlzNmFPS2VWRm9vL1JWRVI4KzJWOGUxNk5iNFNSQVBYMjNPcDZ4QUd2Y3I2NDJaMS9SbDkzKwpVS0F2UGxHS3Z5S1NjaGVFS0w1R1k1d1ZCTEpyZ3MvcVVsTFpRcGlTOFIrZ0ZrSnRNbFhMSXlWbDhXM0gwWjZICkhZbFFTd0lEQVFBQm8xWXdWREFPQmdOVkhROEJBZjhFQkFNQ0JhQXdFd1lEVlIwbEJBd3dDZ1lJS3dZQkJRVUgKQXdJd0RBWURWUjBUQVFIL0JBSXdBREFmQmdOVkhTTUVHREFXZ0JTUHQ3eXV4cHQwcGE5UEhwOWhHblZLN01hUgowREFOQmdrcWhraUc5dzBCQVFzRkFBT0NBUUVBV1ZvUFNuNmlKYmpSeTRBS2tmdzdlcnFwanBDLzEyekFWTm1RCmRjZlFRcng1N2Q5U1ZzbEtnOUZwUmVRbjlMSmlVUFA3blFzSFpkc2NkRE9wc1BKN2FmRjdSQ0ZnSEZGM2NtNU0KS3owVngvNFdYQ2Zqa2pibm1OZnZ0RDRRdDR6Ukt0Yml5ZzFES2xxbGNhTEw4NkdnNGVYNzJ5UmxFNXh1cFN2cApOZFA0M21RcHM5dXZpekhXSk9ZeWdwZ0h1V2RMUlFNNWdxR2xqM2ZCd3lMZENZaktnWmtRc0xOQ3NQbk12aFoyCkQ0REtiRTlaS3A2b3hyVHdKMEc3elVyVlNzd3BtR3JZQkJmVTcrOGNnSlRrQ1ZjdXdTVzliR3RTemlnaGIzVXYKa0dQelBFSzZYcUtUYkYwWmJkT05nUzF0YzAxbk1nY1NNWlI5d0M2d0kxUm0xOXpqMHc9PQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+    client-key-data: LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQpNSUlFcFFJQkFBS0NBUUVBemUyN1VGeHN0TXV2aWJwdzN4djFydUdZN0NVRi9kOG5tdHFvU0dQN2hObTdNVnk1CkFpY3BiMUMybCtjRzMwZ1lHelFPOVZXbUYzMzMxc2NzbXFJMXcrbUZJYXFUTG81K3dVdWNmQkhXSzF0TFJESnMKSGd2N1FlMEpkYWhHQjhrcDhzTG9STkhaMDJVSnc4UGVjZnduekxmdEJqSmo5SlJOUU9PRVJSREpFZUZUSHp4QwpYeExzSi9RSGlmL04zZVp6aU1jZ21qbFUzb3Y1UDdFRmwrVzdEdlBDQU85czZhT0tlVkZvby9SVkVSOCsyVjhlCjE2TmI0U1JBUFgyM09wNnhBR3ZjcjY0MloxL1JsOTMrVUtBdlBsR0t2eUtTY2hlRUtMNUdZNXdWQkxKcmdzL3EKVWxMWlFwaVM4UitnRmtKdE1sWExJeVZsOFczSDBaNkhIWWxRU3dJREFRQUJBb0lCQVFERUZseW9EK28vV2prRApsL0lFc1RZSDJhL3BKUFFJb3lhdVVRbXZMTzJDdW1XQ2duMTA3RitMTEx0QjkrNVdUT3NQZEVuT0dVbDMweTVkCmFQa3pJY1M2a2JHQXRsRkNJdFBXTWE2SGdlQ0RGb0tjSkx0SS9UVzZ1QUNxOVpvQnJlN3d4K0d1TG5rUno0TTEKMDF3TkJBUE43MUdXOWdLeUVVbGl3WUxnMVRQeGZmMXFCdzhaTEtWZ3ZXWjlyTFBRZWVEcm5yODdYZ3dhLzNsUwpRdUlpam4rOWlYK0xoNDZhZVFaa3kvZC9NV0tZVXBxb1pjQmZVQ3pmZFJuTXpVRk00amdUYzlsT29vbnByZ0owCnpnaktMUFBHZ0RoZUxOWDI2Z2FDZ3FCM1RLaktPRVhzNDNOUmwrd01EeVR0TWFsTXJHUi82S1RYQk5JNU84dUMKdXVvQ21NMUJBb0dCQU9zUk8yN1ZvWWg5UGV1R1dOMWN5TWpQaWFKdU5ra0E4WjRoSVVENHowMlN5cE1MV3VuOAp1MS8vS1FaRlJ2aVdFaTVtcktobXAzK041RWdsbHdyOVN5b3pGaXIrMTc1K2lVVUVRdlVUeHFtNk5UbENoa3E5Ck1YSGI2dG5rYmFjNzlEeHVkeGZuellLbnBBRCtRY0VIMXI4M2hGc1NnQUhDK1E3MWlETnlXU0doQW9HQkFPQkUKTzV0U3IvVmRSajJUQ0Z0N1VoaVBGQ3Z4TUZWRlZvRHZVOTZqM2tORHdBT2JWSjFOZTdZcHdycksrUHVVTUUrTQpjZmJURzJmMFdVL0ppU3liSzhXZ0JJVWlhS1k1RGJMekhLR254NVVxQ3IyaTc5TmVScVVDbjhPejBodVFSR1ZwCnRYWTlHcURhQ3ZmbmZpMHJjd1diT3prZS9qTWJNQXNrOFBDcjVRSnJBb0dCQUsvOVJNdmtNWDNvbG5WQkxrTDgKOW00eHcwL1N4OTI4VVNrY2tMTCtGT1oxSWlrWTlVWDlxNk5oZTZ0d0xvUnFoczRxbk5XdmxYUFFIYnRPT1ZsRwo3Z0Y0SWY2cXNZZXpZTDVGUklRTC9FNlNWTXE3M2FNVEpuT2lQS0JKZnpjWGtmRzBtb0ZSVVBHaTVRekJUeVZmCjR3MWlXVHQrREV4RlZ3WTJHWFM3QmJSQkFvR0FWeUNMRzhQYkVuTWpWOGFvcDRuWWtpdjhCVHBWc2JzWGFVNFIKZ2x5ZGUvcDFQYkY2QlFiV09pWXRQZzZlL25aSzhveTR0ZEM4US8yOU9POHVPTU1zRlVJZW4yNkh3NVJFeXpJQgovSmZIUlI4cFB4VnZJT251ZmlydjBNTXFySVMyM2NOY3VVdng3VzNvZHZsYm5zYlRqK2tIOENBblY4bUhONzBwClVnY21HSE1DZ1lFQWtzMVE2Y21LT09DMXpoZnl5QkdNWWxQazN0Zkk0cERvUGlBNHZOa3EvRDFOVHBEemV1S1UKT3NRYXlOZUtJNUxBVVhxampGM21NTDlqbU9kVERhRHRlZ1RvYUNxNnhTS1NCNnUxSklUTGxWVHZUYktob0pzSwppa2hNNkoxZDVNQzRKbHh6VGR2S3RpWVdXVFlOSGtEbk9CZEg5MDBJYTY3R1ZiSWc2MC9uQlpFPQotLS0tLUVORCBSU0EgUFJJVkFURSBLRVktLS0tLQo=
+
+
+- The file is in YAML format. there are several top-level keys including clusters, contexts, current-context, and users.
+
+
+- A context is a triple of a cluster (kubernetes), a user (kubernetes-admin), and a Namespace (if not specified, the default Namespace is used). 
+
+
+
+4. View the config commands provided by kubectl:
+
+$ kubectl config --help
+
+
+5. Enter the following config command to get a summary of the contexts available in a kubeconfig file:
+
+$ kubectl config get-contexts 
+
+CURRENT   NAME                          CLUSTER      AUTHINFO           NAMESPACE
+*         kubernetes-admin@kubernetes   kubernetes   kubernetes-admin 	
+	
+	
+- This view is useful for showing you all of the configured contexts and which is the CURRENT context. If there is no current context set, there will be no * in the first column. 
+
+
+
+6. Back up the kubeconfig before removing the user and observing the impact on a request:
+
+cp .kube/config .kube/config.orig
+sed -i '15,$d' .kube/config
+kubectl get pods --v=6
+
+
+I0227 10:48:19.618642    2295 loader.go:372] Config loaded from file:  /home/ubuntu/.kube/config
+Please enter Username: xax
+Please enter Password:  I0227 10:48:23.677125    2295 round_trippers.go:454] GET https://10.0.0.100:6443/api/v1/namespaces/default/pods?limit=500 403 Forbidden in 8 milliseconds
+I0227 10:48:23.677392    2295 helpers.go:216] server response object: [{
+  "kind": "Status",
+  "apiVersion": "v1",
+  "metadata": {},
+  "status": "Failure",
+  "message": "pods is forbidden: User \"system:anonymous\" cannot list resource \"pods\" in API group \"\" in the namespace \"default\"",
+  "reason": "Forbidden",
+  "details": {
+    "kind": "pods"
+  },
+  "code": 403
+}]
+
+
+
+- Without a certificate username and password authentication is fallen back to.
+
+- No users are configured for password authentication in the cluster so any combination of username and password will be forbidden. The same result would happen if a client certificate expired or was invalid for another reason.
+
+
+7. ServiceAccount use tokens for authentication which are stored in Secrets. see the serviceaccount of default.
+
+$ kubectl get serviceaccounts default -o yaml
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  creationTimestamp: "2021-09-24T00:47:53Z"
+  name: default
+  namespace: default
+  resourceVersion: "501"
+  uid: 2892f1ae-f7b1-4c0b-98fd-8abcff75f502
+secrets:
+- name: default-token-s5m4p
+
+	
+	
+8. View the value of the Secret by entering the following:
+
+$ kubectl get secrets default-token-s5m4p -o yaml
+
+apiVersion: v1
+kind: Secret
+metadata:
+  annotations:
+    kubernetes.io/service-account.name: default
+    kubernetes.io/service-account.uid: 2892f1ae-f7b1-4c0b-98fd-8abcff75f502
+  creationTimestamp: "2021-09-24T00:47:53Z"
+  name: default-token-s5m4p
+  namespace: default
+  resourceVersion: "492"
+  uid: f1cbe8a0-7a6f-43ed-b10d-0c2c504f9cb3
+type: kubernetes.io/service-account-token 
+data:
+  ca.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUM1ekNDQWMrZ0F3SUJBZ0lCQURBTkJna3Foa2lHOXcwQkFRc0ZBREFWTVJNd0VRWURWUVFERXdwcmRXSmwKY201bGRHVnpNQjRYRFRJeE1Ea3lOREF3TkRjeU1Gb1hEVE14TURreU1qQXdORGN5TUZvd0ZURVRNQkVHQTFVRQpBeE1LYTNWaVpYSnVaWFJsY3pDQ0FTSXdEUVlKS29aSWh2Y05BUUVCQlFBRGdnRVBBRENDQVFvQ2dnRUJBTVJJCjdXQStldlVIUTRQYUo1bUhGVDRHT08wQzRoelFnaUNGVGRmdVdrVEVhVHdkVHhaSzV2MWRlMlNXeHlmY2FGM20KcE9hRGZaSU5PdUc1TFNzTWhNNjZ2bnM3Y3FkWmdFZDdvSEJJcDBUKzUyc0crN2l5bUVJWFVTYjFlTndzRlBLZAp6MmdRNGs4emFNVFhyaDgyb3lnSlJIeCtHSks3bWJrOGJ5NEh6dUx2SEZFN3FDT3VCa2o0TVVOQkpYQUx6YVZ6CkJBZU1GZG5NdDJpc1U5bEIvaUhDVWRIcG1PYVpPMUh5MHVKNzRTdUJLZzdOWjJicFJUTGpHSzJwL0dqS0NQWHkKVmJudDRydmoreThLMk9sLzZpVGVWTU5VOFdidWJIdEZTbVoxNDZEcFpKd1RtYmQ5TGM0RnBkTC9xd0dybmNvQgo4Rk9SU3BsV1B2MFdINnp0TFdjQ0F3RUFBYU5DTUVBd0RnWURWUjBQQVFIL0JBUURBZ0trTUE4R0ExVWRFd0VCCi93UUZNQU1CQWY4d0hRWURWUjBPQkJZRUZJKzN2SzdHbTNTbHIwOGVuMkVhZFVyc3hwSFFNQTBHQ1NxR1NJYjMKRFFFQkN3VUFBNElCQVFDRlYrRXZLVzY1cGNGNFJSRGNGdnprQ1RZV29DS3U3T0o3Q3FhTWF2NVIycHR3MTVVcwpub0NHcmlvTElpRkw1Vit1c3N6SWE0Vk5iWlRDZXB0ZmVCRTdlQTNjSmtXY1FQRVdNeWJobTNibTRJbHIzOHkxCk5OdGZTMFJ3UDNlNDFEZmRRTmFFSkR1dmFSSDYyejd5ZFhPSlNVR0lwUHVBRFZSVWRaUXd3S3NyWmthN0xSSzYKV213WEk2c050eE8zSGMycCtNV09pdjA1bjQ5VjVSbDlHVW1WN0d5VnBNRndzNDhaM3l5TU03Q1EwUWxiVWE1WApYL2lHUGxKS0U0cS8vUC9XLysxT2R6bmFIckxHMEJGS2cxV29UN0RFb3owMlZTMytMRG8zZ1RRTzdLNXlLU3ZWCkExTnNYMzYvZUpIeEI1U21uYmlEeFJrcHJQSy9CWUd6d2R2WgotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+  namespace: ZGVmYXVsdA==
+  token: ZXlKaGJHY2lPaUpTVXpJMU5pSXNJbXRwWkNJNklqWmpNRGxKVDNocGVFaHNOamxHZVVabGVETTRRek5SUjB0Q1FWVlhXaTFGYTA4d2IyUXhNbTk2YVdjaWZRLmV5SnBjM01pT2lKcmRXSmxjbTVsZEdWekwzTmxjblpwWTJWaFkyTnZkVzUwSWl3aWEzVmlaWEp1WlhSbGN5NXBieTl6WlhKMmFXTmxZV05qYjNWdWRDOXVZVzFsYzNCaFkyVWlPaUprWldaaGRXeDBJaXdpYTNWaVpYSnVaWFJsY3k1cGJ5OXpaWEoyYVdObFlXTmpiM1Z1ZEM5elpXTnlaWFF1Ym1GdFpTSTZJbVJsWm1GMWJIUXRkRzlyWlc0dGN6VnROSEFpTENKcmRXSmxjbTVsZEdWekxtbHZMM05sY25acFkyVmhZMk52ZFc1MEwzTmxjblpwWTJVdFlXTmpiM1Z1ZEM1dVlXMWxJam9pWkdWbVlYVnNkQ0lzSW10MVltVnlibVYwWlhNdWFXOHZjMlZ5ZG1salpXRmpZMjkxYm5RdmMyVnlkbWxqWlMxaFkyTnZkVzUwTG5WcFpDSTZJakk0T1RKbU1XRmxMV1kzWWpFdE5HTXdZaTA1T0daa0xUaGhZbU5tWmpjMVpqVXdNaUlzSW5OMVlpSTZJbk41YzNSbGJUcHpaWEoyYVdObFlXTmpiM1Z1ZERwa1pXWmhkV3gwT21SbFptRjFiSFFpZlEuRXU0eTlzcnpHVXFkaGhpcTZtN0N5dTk1dUVuYUxEZngxcUJHWDd3Q25FbWxDQUZMVTktZGxRNlpydnRFam5EUmtLcHMzckxuMS1kdHNKM0xObTZnSWx0S19tX2RJNWJuNFg0czhMX3V4dnlTbDZEWThMTTNST0VPOW9xVndtams4SjRXUm5zV1pXSmw5LVdVUVZWOGlZdTJibS1oZmVKNEZxU1hvUjVSWnBSaXR2UnlRcm1MZjh0Q0xCQkZQTTJjNVVveE5rSW1BZE9jVkdHNkJqS2J4MVU4dVpsdF9JLWRJR3JPVEdNZU5XdEM5Z1JKVW84eEFMaWdmTV9wLS1uNjFtUkNuRk1XYjBVVUotZEF2TDMxUGFlcF9nb01hUktCNWFZM1NSRllscjRGdDRnSTI0dGE5NlJRb0hfaWVSQjRYVVdubjVzZGZnZ21pUXlQRFJqZHBB
+
+	
+	
+- The second layer in Kubernetes API access control is authorization. 
+- At this stage the request is authenticated and the requesting user is known. 
+- Authorization needs to determine if the authenticated user is allowed to perform the action requested.
+-  The default authorization mechanism in Kubernetes is role-based access control (RBAC). 
+- In RBAC, subjects (users, groups, ServiceAccounts) are bound to roles and the roles describe what actions the subject is allowed to perform. 
+
+- There are two kinds of roles in Kubernetes RBAC:
+
+	- Role: A namespaced resource specifying allowed actions
+	- ClusterRole: A non-namespaced resource specifying allowed actions
+	
+Roles include a Namespace where the actions are allowed in contrast to ClusterRoles which don't include a Namespace and can be bound to any and all Namespaces. 
+
+
+There are two resources available for binding roles to subjects:
+
+	- RoleBinding: Bind a Role to a subject(s) in a Namespace
+	- ClusterRoleBinding: Bind a ClusterRole to a subject(s) cluster-wide	
+	
+
+
+1. List the Roles in all Namespaces:
+
+$ kubectl get role --all-namespaces 
+
+NAMESPACE              NAME                                             CREATED AT
+kube-public            kubeadm:bootstrap-signer-clusterinfo             2021-09-24T00:47:46Z
+kube-public            system:controller:bootstrap-signer               2021-09-24T00:47:45Z
+kube-system            extension-apiserver-authentication-reader        2021-09-24T00:47:45Z
+kube-system            kube-proxy                                       2021-09-24T00:47:47Z
+kube-system            kubeadm:kubelet-config-1.21                      2021-09-24T00:47:45Z
+kube-system            kubeadm:nodes-kubeadm-config                     2021-09-24T00:47:45Z
+kube-system            system::leader-locking-kube-controller-manager   2021-09-24T00:47:45Z
+kube-system            system::leader-locking-kube-scheduler            2021-09-24T00:47:45Z
+kube-system            system:controller:bootstrap-signer               2021-09-24T00:47:45Z
+kube-system            system:controller:cloud-provider                 2021-09-24T00:47:45Z
+kube-system            system:controller:token-cleaner                  2021-09-24T00:47:45Z
+kubernetes-dashboard   kubernetes-dashboard                             2021-09-24T00:47:53Z
+
+
+- The Roles all have an associated Namespace in the first column. 
+
+
+2. View the Role object for the kube-proxy Role in the kube-system Namespace:
+
+$ kubectl get role kube-proxy -n kube-system -o yaml
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  creationTimestamp: "2021-09-24T00:47:47Z"
+  name: kube-proxy
+  namespace: kube-system
+  resourceVersion: "249"
+  uid: a7038899-b949-4ca5-9aab-b83f6df908ec
+rules:
+- apiGroups:
+  - ""
+  resourceNames:
+  - kube-proxy
+  resources:
+  - configmaps
+  verbs:
+  - get
+
+
+- The example allows read (get) access to ConfigMaps (configmaps) named kube-proxy. The verbs declare which HTTP verbs are allowed for requests. The Kubernetes API is organized into groups and the apiGroups list indicates which API group(s) the rule applies to. 
+- The core API group which includes the most commonly used resources, including ConfigMaps, is denoted by an empty string ("").
+
+
+
+3. List all of the cluster roles:
+
+$ kubectl get clusterroles
+
+NAME                                                                   CREATED AT
+admin                                                                  2021-09-24T00:47:44Z
+calico-kube-controllers                                                2021-09-24T00:47:49Z
+calico-node                                                            2021-09-24T00:47:49Z
+cluster-admin                                                          2021-09-24T00:47:44Z
+edit                                                                   2021-09-24T00:47:44Z
+kubeadm:get-nodes                                                      2021-09-24T00:47:46Z
+kubernetes-dashboard                                                   2021-09-24T00:47:53Z
+system:aggregate-to-admin                                              2021-09-24T00:47:44Z
+system:aggregate-to-edit                                               2021-09-24T00:47:44Z
+system:aggregate-to-view                                               2021-09-24T00:47:44Z
+system:aggregated-metrics-reader                                       2021-09-24T00:48:01Z
+system:auth-delegator                                                  2021-09-24T00:47:44Z
+system:basic-user                                                      2021-09-24T00:47:44Z
+system:certificates.k8s.io:certificatesigningrequests:nodeclient       2021-09-24T00:47:44Z
+system:certificates.k8s.io:certificatesigningrequests:selfnodeclient   2021-09-24T00:47:44Z
+system:certificates.k8s.io:kube-apiserver-client-approver              2021-09-24T00:47:44Z
+system:certificates.k8s.io:kube-apiserver-client-kubelet-approver      2021-09-24T00:47:44Z
+..
+..
+..
+
+
+- Kubernetes creates several cluster roles by default. The one that is germane to this exercise is the cluster-admin role.
+
+
+
+4. Show the cluster-admin ClusterRole resource YAML:
+
+$ kubectl get clusterroles cluster-admin -o yaml
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    rbac.authorization.kubernetes.io/autoupdate: "true"
+  creationTimestamp: "2021-09-24T00:47:44Z"
+  labels:
+    kubernetes.io/bootstrapping: rbac-defaults
+  name: cluster-admin
+  resourceVersion: "90"
+  uid: 0b80f2c5-b76b-4f68-b891-58fd7472ecbf
+rules:
+- apiGroups:
+  - '*'
+  resources:
+  - '*'
+  verbs:
+  - '*'
+- nonResourceURLs:
+  - '*'
+  verbs:
+  - '*'
+  
+  
+- The rules key allows all actions (verbs) on all resources. Access to any non-resource URLs (nonResourceURLs)is also allowed providing full access to the cluster. 
+
+
+
+5. Describe the cluster-admin ClusterRoleBinding to understand how the cluster-admin ClusterRole is bound to users:
+
+$ kubectl get clusterrolebindings
+
+NAME                                                   ROLE                                                                               AGE
+admin-cluster-binding                                  ClusterRole/cluster-admin                                                          156d
+calico-kube-controllers                                ClusterRole/calico-kube-controllers                                                156d
+calico-node                                            ClusterRole/calico-node                                                            156d
+cluster-admin                                          ClusterRole/cluster-admin                                                          156d
+kubeadm:get-nodes                                      ClusterRole/kubeadm:get-nodes                                                      156d
+..
+..
+
+
+$ kubectl get clusterrolebindings cluster-admin -o yaml
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  annotations:
+    rbac.authorization.kubernetes.io/autoupdate: "true"
+  creationTimestamp: "2021-09-24T00:47:44Z"
+  labels:
+    kubernetes.io/bootstrapping: rbac-defaults
+  name: cluster-admin
+  resourceVersion: "152"
+  uid: 85f90c4c-2f7d-4102-bd7b-d4d891bb7ec3
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: Group
+  name: system:masters
+
+
+- The RoleRef map specifies the name of the ClusterRole that is being bound
+- the subjects map lists all the subjects (users, groups, or service accounts) that are bound to the ClusterRole. 
+- In this case, the ClusterRole is bound to a Group named system:masters. 
+
+- Because identities are managed outside of Kubernetes, you cannot use kubectl to show details of users or groups.
+
+
+
+6. You can use kubectl to tell you whether a subject is allowed to make a request
+
+- Confirm the kubernetes-admin user is authorized to list nodes:
+
+$ kubectl auth can-i list nodes
+yes
+
+$ kubectl auth can-i --help
+
+
+7. Check if the user Tracy is allowed to list nodes:
+
+$ kubectl auth can-i list nodes --as=Tracy
+no
+
+
+
+
+
+- Admission control is the final layer of access control in the Kubernetes API. A Kubernetes cluster can have many admission control modules and the modules used by a cluster can be configured.
+
+- For example, the ResourceQuota admission controller enforces resource quotas configured in a Namespace. 
+
+- Admission controllers can also modify requests before they are accepted. For example, the LimitRanger admission controller allows you to specify default cpu and memory limits for Pods that don't specify any.
+
+
+1. exec into the Kubernetes API Server Pod and display the kube-apiserver help to see what admission controllers are available and enabled by default:
+
+$ kubectl exec -n kube-system kube-apiserver-ip-10-0-0-100.us-west-2.compute.internal -- kube-apiserver -h | grep "enable-admission-plugins strings"
+
+      --enable-admission-plugins strings       admission plugins that should be enabled in addition to default enabled ones (NamespaceLifecycle, LimitRanger, ServiceAccount, TaintNodesByCondition, Priority, DefaultTolerationSeconds, DefaultStorageClass, StorageObjectInUseProtection, PersistentVolumeClaimResize, RuntimeClass, CertificateApproval, CertificateSigning, CertificateSubjectRestriction, DefaultIngressClass, MutatingAdmissionWebhook, ValidatingAdmissionWebhook, ResourceQuota). Comma-delimited list of admission plugins: AlwaysAdmit, AlwaysDeny, AlwaysPullImages, CertificateApproval, CertificateSigning, CertificateSubjectRestriction, DefaultIngressClass, DefaultStorageClass, DefaultTolerationSeconds, DenyServiceExternalIPs, EventRateLimit, ExtendedResourceToleration, ImagePolicyWebhook, LimitPodHardAntiAffinityTopology, LimitRanger, MutatingAdmissionWebhook, NamespaceAutoProvision, NamespaceExists, NamespaceLifecycle, NodeRestriction, OwnerReferencesPermissionEnforcement, PersistentVolumeClaimResize, PersistentVolumeLabel, PodNodeSelector, PodSecurityPolicy, PodTolerationRestriction, Priority, ResourceQuota, RuntimeClass, SecurityContextDeny, ServiceAccount, StorageObjectInUseProtection, TaintNodesByCondition, ValidatingAdmissionWebhook. The order of plugins in this flag does not matter.
+	  
+	  
+- There are 17 admission controllers enabled by default, although they can be disabled if desired. 
+
+- To view any non-default admission controllers that are enabled using the --enable-admission-plugins option, you need to connect to a control-plane node where the API server is running.
+
+
+2. Connect to the control-plane node at 10.0.0.100:
+
+$ ssh 10.0.0.100 -oStrictHostKeyChecking=no
+
+Warning: Permanently added '10.0.0.100' (ECDSA) to the list of known hosts.
+Welcome to Ubuntu 18.04.6 LTS (GNU/Linux 5.4.0-1045-aws x86_64)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/advantage
+
+Welcome to Cloud Academy Labs
+
+ubuntu@ip-10-0-0-100:~$
+
+
+3. List all the processes on the machine and use grep to select the kube-apiserver process and highlight the --enable-admission-plugins option:
+
+root      1968  1681  6 10:24 ?        00:03:22 kube-apiserver --advertise-address=10.0.0.100 --allow-privileged=true --authorization-mode=Node,RBAC --client-ca-file=/etc/kubernetes/pki/ca.crt --cloud-provider=aws --enable-admission-plugins=NodeRestriction --enable-bootstrap-token-auth=true --etcd-cafile=/etc/kubernetes/pki/etcd/ca.crt --etcd-certfile=/etc/kubernetes/pki/apiserver-etcd-client.crt --etcd-keyfile=/etc/kubernetes/pki/apiserver-etcd-client.key --etcd-servers=https://127.0.0.1:2379 --insecure-port=0 --kubelet-client-certificate=/etc/kubernetes/pki/apiserver-kubelet-client.crt --kubelet-client-key=/etc/kubernetes/pki/apiserver-kubelet-client.key --kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname --proxy-client-cert-file=/etc/kubernetes/pki/front-proxy-client.crt --proxy-client-key-file=/etc/kubernetes/pki/front-proxy-client.key --requestheader-allowed-names=front-proxy-client --requestheader-client-ca-file=/etc/kubernetes/pki/front-proxy-ca.crt --requestheader-extra-headers-prefix=X-Remote-Extra- --requestheader-group-headers=X-Remote-Group --requestheader-username-headers=X-Remote-User --secure-port=6443 --service-account-issuer=https://kubernetes.default.svc.cluster.local --service-account-key-file=/etc/kubernetes/pki/sa.pub --service-account-signing-key-file=/etc/kubernetes/pki/sa.key --service-cluster-ip-range=10.96.0.0/12 --tls-cert-file=/etc/kubernetes/pki/apiserver.crt --tls-private-key-file=/etc/kubernetes/pki/apiserver.key
+
+
+- *** MOTE: The NodeRestriction admission controller is enabled in addition to the default admission controllers in this cluster.
+
+
+
+
+
+
+
+
+
+
+
+
+	
 
 ================================================================================================
 
@@ -11438,9 +12523,11 @@ root@controlplane:~# kubectl get po -n kube-system
 
 
 
+
+
 ===============================================================================================
 
-Custom Resource Definition (CRD)
+Custom Resource Definitions (CRD)
 
 ===============================================================================================
 
@@ -11555,6 +12642,57 @@ $ kubectl create -f flightticker-crd-definition.yaml
 
 
 
+CloudAcademy Exercise:
+-----------------------
+
+- Kubernetes allows you to define your own custom resources and controllers to extend the Kubernetes API beyond the built-in resources. 
+- Custom resource types are defined using Custom Resource Definitions (CRDs) in Kubernetes. 
+- Once defined, custom resources can be used the same way you use built-in resources. For example, you can use kubectl to get and describe the custom resource objects and use kubectl apply and edit to modify them.
+
+- the Kubernetes cluster in this lab is pre-installed with a Helm package for Argo CD, a GitOps continuous delivery application. After learning the basics of CRDs, you will work with Argo CD custom resources to release an update to an application.
+
+
+1. Use kubectl to get the custom resource definitions (crds) defined in the cluster:
+
+$ kubectl get crds
+
+NAME                                                  CREATED AT
+applications.argoproj.io                              2022-02-27T09:36:58Z
+appprojects.argoproj.io                               2022-02-27T09:36:59Z
+bgpconfigurations.crd.projectcalico.org               2021-09-24T00:47:48Z
+bgppeers.crd.projectcalico.org                        2021-09-24T00:47:48Z
+blockaffinities.crd.projectcalico.org                 2021-09-24T00:47:48Z
+clusterinformations.crd.projectcalico.org             2021-09-24T00:47:48Z
+felixconfigurations.crd.projectcalico.org             2021-09-24T00:47:48Z
+globalnetworkpolicies.crd.projectcalico.org           2021-09-24T00:47:48Z
+globalnetworksets.crd.projectcalico.org               2021-09-24T00:47:48Z
+hostendpoints.crd.projectcalico.org                   2021-09-24T00:47:48Z
+ipamblocks.crd.projectcalico.org                      2021-09-24T00:47:48Z
+ipamconfigs.crd.projectcalico.org                     2021-09-24T00:47:48Z
+ipamhandles.crd.projectcalico.org                     2021-09-24T00:47:48Z
+ippools.crd.projectcalico.org                         2021-09-24T00:47:48Z
+kubecontrollersconfigurations.crd.projectcalico.org   2021-09-24T00:47:49Z
+networkpolicies.crd.projectcalico.org                 2021-09-24T00:47:49Z
+networksets.crd.projectcalico.org                     2021-09-24T00:47:49Z
+
+- There are custom resources defined for both Argo (argoproj.io) and Calico (projectcalico.org) which is the cluster's container network implementation.
+
+- Argo defines applications and approjects resources. 
+	- The application resource encapsulates everything needed to deploy an application.
+	- an appproject is a logical grouping of applications.
+	
+	
+2. View the definition of the Application custom resource using the yaml output option and page the output through more:
+
+
+
+3. Get all the Applications in the cluster:
+
+
+
+
+
+
 
 
 
@@ -11599,7 +12737,7 @@ Custom Controllers
 
 ======================================================================================
 
-Deployment Strategy - Blue Green
+::Deployment Strategy - Blue Green::
 
 ======================================================================================
 
@@ -11624,7 +12762,7 @@ Other than these 2, there are few additional deployment strategies that we can n
 
 - can be implemented using native kubernetes deployments and services.
 
-- 2 deployment yamal, blue and green, blue has old ver. v1 and green has new ver. v2
+- 2 deployment yaml, blue and green, blue has old ver. v1 and green has new ver. v2
 - 1 service, first pointing to old ver. blue (image: myapp-image:1.0) using pod selector as v1, once the green is tested, point to green (image: myapp-image:2.0) using pod selector as v2
 
 myapp-deployment-blue.yaml
@@ -11796,9 +12934,441 @@ $ kubectl delete deployment frontend
 
 
 
+CloudAcademy Exercise:
+-------------------------------------
+- By combining Kubernetes primitives; namely Deployments, Services, and Labels; you can expand the available deployment strategies beyond the built-in Recreate or RollingUpdate strategies supported by Deployments. This lab step will show you how to perform the following deployment strategies by combining Kubernetes primitives:
+
+	- Canary deployments - A small subset of traffic is sent to the new version to build confidence in it before fully deploying the new version.
+	
+	- Blue/Green deployments - All traffic is cut over from the existing version, referred to as the "blue" environment, to the new version, referred to as the "green" environment.
+
+- these deployments, as well as rolling updates, avoid any downtime. 
+
+- Canary deployments are used to test out new versions while minimizing the impact if issues arise.
+
+- Blue/Green deployments allow you to fully deploy a new green environment while all production traffic remains sent to the existing blue environment and cut over all the traffic at once to the green environment when you are ready. 
+	- A drawback is that you need twice the amount of resources of a single environment.
+	
+
+1. Create a Namespace for the resources you'll create in this lab step and change your default kubectl context to use the Namespace:
+
+# Create namespace
+$ kubectl create namespace strategies
+
+# Set namespace as the default for the current context
+$ kubectl config set-context $(kubectl config current-context) --namespace=strategies
+
+
+2. Create a Deployment with 10 replicas by entering the following:
+
+cat << EOF | kubectl apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: web
+    version: old
+  name: app
+spec:
+  replicas: 10
+  selector:
+    matchLabels:
+      app: web
+      version: old
+  strategy:
+    type: RollingUpdate # Default value is RollingUpdate, Recreate also supported
+  template:
+    metadata:
+      labels:
+        app: web
+        version: old
+    spec:
+      containers:
+      - image: nginx:1.21.3-alpine
+        name: nginx
+        ports:
+        - containerPort: 80
+        readinessProbe:
+          failureThreshold: 3 
+          httpGet:
+            path: /
+            port: 80
+            scheme: HTTP
+          periodSeconds: 5
+          successThreshold: 2
+          timeoutSeconds: 10
+EOF
+
+
+$ kubectl get deployments.apps 
+NAME   READY   UP-TO-DATE   AVAILABLE   AGE
+app    10/10   10           10          20s
+
+$ kubectl get po -w
+NAME                   READY   STATUS    RESTARTS   AGE
+app-7548ff6889-5hdzx   1/1     Running   0          15s
+app-7548ff6889-5r78r   1/1     Running   0          15s
+app-7548ff6889-bwh78   1/1     Running   0          15s
+app-7548ff6889-hgj4f   1/1     Running   0          15s
+app-7548ff6889-hnc4m   1/1     Running   0          15s
+app-7548ff6889-jwtvj   1/1     Running   0          15s
+app-7548ff6889-qjkql   1/1     Running   0          15s
+app-7548ff6889-r7nlp   1/1     Running   0          15s
+app-7548ff6889-s64gg   1/1     Running   0          15s
+app-7548ff6889-vl7p6   1/1     Running   0          15s
+
+
+- The Deployment uses the spec.strategy.type of RollingUpdate to gradually roll out new versions. This is the default value. The Recreate strategy is also supported natively by Deployments. Recreate causes all Pods to be deleted before any Pods of the new version are created.
+
+- The Deployment has an app: web label to identify the application. 
+	- Applying additional labels to distinguish between different versions or environments will play a key part in performing additional deployment strategies. 
+	- In this case the version: old label indicates it is an old version needing to be updated. 
+	- In production environments, the value would most likely be a release version number.
+	
+
+3. Create a Service that exposes the Deployment through a load balancer for you to access it outside the cluster:
+
+cat << EOF | kubectl apply -f -
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: web
+  name: app
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: web
+  type: LoadBalancer
+EOF
+
+
+$ kubectl get svc -w
+
+NAME   TYPE           CLUSTER-IP      EXTERNAL-IP   															PORT(S)        AGE
+app    LoadBalancer   10.104.93.146   <pending>     															80:31937/TCP   3s
+app    LoadBalancer   10.104.93.146   aa9291a3eeba84bdfaa9f8828a938eec-1350387676.us-west-2.elb.amazonaws.com   80:31937/TCP   9s
+
+- In a production environment, you can imagine this Service acts as the entry point for production traffic to the web app. Having the Service in front of the deployments allows you to create additional Deployments behind the Service to perform additional deployment strategies.
+
+
+
+4. Watch for the EXTERNAL-IP field to populate in the get service output and press ctrl+c once it does:
+
+aa9291a3eeba84bdfaa9f8828a938eec-1350387676.us-west-2.elb.amazonaws.com
+
+
+
+5. Copy the DNS address in the External-IP column and navigate to it in a new browser tab:
+
+
+Welcome to nginx!
+
+Note: It can take a minute for all of the load balancer's health checks to pass. If you don't see the above view, refresh the page every 15 seconds until it appears.
+
+
+- You will now prepare to do a Blue/Green deployment. 
+- The existing Deployment serves as the "blue" environment. 
+- To ensure the Service only routes traffic to the old version while a new "green" environment is created, you need to update the Service's selector to include version: old.
+
+
+
+6. Patch the Service's selector to include both the app: web and version: old labels:
+
+cat << EOF | kubectl patch service app --patch-file /dev/stdin
+spec:
+  selector:
+    app: web
+    version: old
+EOF
+
+
+- The above command outputs the patch in YAML format and pipes it through to the patch command which reads the patch from standard input (/dev/stdin). 
+- You could equivalently use kubectl edit or other methods to update it. 
+
+- You can confirm the Service now selects both the app: web and version: old labels by entering kubectl get service -o wide
+
+$ kubectl get svc -o wide
+
+NAME   TYPE           CLUSTER-IP      EXTERNAL-IP                                                               PORT(S)        AGE    SELECTOR
+app    LoadBalancer   10.104.93.146   aa9291a3eeba84bdfaa9f8828a938eec-1350387676.us-west-2.elb.amazonaws.com   80:31937/TCP   8m5s   app=web,version=old
+
+
+
+7. Create a new 10 replica deployment named app-new that uses a new image (httpd) and includes the version: new label to act as the green environment:
+
+cat << EOF | kubectl apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: web
+    version: new
+  name: app-new
+spec:
+  replicas: 10
+  selector:
+    matchLabels:
+      app: web
+      version: new
+  template:
+    metadata:
+      labels:
+        app: web
+        version: new
+    spec:
+      containers:
+      - image: httpd:2.4.49-alpine3.14
+        name: httpd
+        ports:
+        - containerPort: 80
+        readinessProbe:
+          failureThreshold: 3 
+          httpGet:
+            path: /
+            port: 80
+            scheme: HTTP
+          periodSeconds: 5
+          successThreshold: 2
+          timeoutSeconds: 10
+EOF
+
+- The labels and selector have been modified to include version: new and the containers.image has been changed to httpd (earlier nginx)
+
+- The app: web label still applies to indicate it is the same application as the initial deployment, but now the version label can be used to identify the old and new app versions.
+
+
+$ kubectl get deployments.apps 
+
+NAME      READY   UP-TO-DATE   AVAILABLE   AGE
+app       10/10   10           10          12m
+app-new   10/10   10           10          53s
+
+
+- With blue/green deployments you can wait for the green environment to come up and test the environment before deciding to cut over production traffic. 
+
+- You could do this by creating a separate service to be used exclusively for internal testing and deleting it once you are confident with the new version.
+
+
+
+9. Confirm that the service is still serving the old version of the app by refreshing your browser tab:
+
+
+10. Create a new Service that exposes the Deployment (app-new) through a load balancer for you to access it outside the cluster and test:
+
+cat << EOF | kubectl apply -f -
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: web
+  name: app-new
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: web
+    version: new
+  type: LoadBalancer
+EOF
+
+
+$ kubectl get svc -o wide
+
+NAME      TYPE           CLUSTER-IP       EXTERNAL-IP                                                               PORT(S)        AGE   SELECTOR
+app       LoadBalancer   10.104.93.146    aa9291a3eeba84bdfaa9f8828a938eec-1350387676.us-west-2.elb.amazonaws.com   80:31937/TCP   14m   app=web,version=old
+
+app-new   LoadBalancer   10.105.159.201   a4baaa0c711654fa097f85b4f79b382c-930522447.us-west-2.elb.amazonaws.com    80:32128/TCP   17s   app=web,version=new
+
+access the service now:
+http://a4baaa0c711654fa097f85b4f79b382c-930522447.us-west-2.elb.amazonaws.com/
+
+It works!
+
+
+11. Cut over to the green environment by patching the Service to select the new version:
+
+cat << EOF | kubectl patch service app --patch-file /dev/stdin
+spec:
+  selector:
+    app: web
+    version: new
+EOF
+
+
+
+$ kubectl get svc app -o wide
+
+NAME   TYPE           CLUSTER-IP      EXTERNAL-IP                                                               PORT(S)        AGE   SELECTOR
+app    LoadBalancer   10.104.93.146   aa9291a3eeba84bdfaa9f8828a938eec-1350387676.us-west-2.elb.amazonaws.com   80:31937/TCP   19m   app=web,version=new
+
+
+It works!
+
+This is the default page served by the httpd container.
+
+Note: Your browser may cache the previous response. If you don't see It works! you can open the address in a private mode/incognito browser tab or a different browser.
+
+
+
+12. Delete the blue environment (old version deployment):
+
+$ kubectl delete deployments.apps app
+
+
+
+
+canary deployment
+------------------
+
+You will now work on a canary deployment of a new version. To prepare for that you will again patch the service to only select the app: web label and not a specific version.
+
+
+13. Patch the Service's selector to only select the app: web label:
+
+$ kubectl edit svc app-new
+
+- remove version: new from selector section and keep only, app: web
+
+
+$ kubectl get svc app-new -o wide
+
+NAME      TYPE           CLUSTER-IP       EXTERNAL-IP                                                              PORT(S)        AGE     SELECTOR
+app-new   LoadBalancer   10.105.159.201   a4baaa0c711654fa097f85b4f79b382c-930522447.us-west-2.elb.amazonaws.com   80:32128/TCP   9m19s   app=web
+
+
+
+- Now the Service will select Pods running any version of the app. 
+- To serve traffic to a canary deployment you will create a new deployment with a single replica and ensure the deployment has the app: web label along with another label to identify the canary.
+
+
+14. Create a single replica canary Deployment with a version: canary label:
+
+cat << EOF | kubectl apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: web
+    version: canary
+  name: app-canary
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web
+      version: canary
+  template:
+    metadata:
+      labels:
+        app: web
+        version: canary
+    spec:
+      containers:
+      - image: caddy:2.4.5-alpine
+        name: caddy
+        ports:
+        - containerPort: 80
+        readinessProbe:
+          failureThreshold: 3 
+          httpGet:
+            path: /
+            port: 80
+            scheme: HTTP
+          periodSeconds: 5
+          successThreshold: 2
+          timeoutSeconds: 10
+EOF
+
+
+
+$ kubectl get deployments.apps 
+
+NAME         READY   UP-TO-DATE   AVAILABLE   AGE
+app-canary   1/1     1            1           13s
+app-new      10/10   10           10          17m
+
+
+
+$ kubectl get deployments -o wide
+
+NAME         READY   UP-TO-DATE   AVAILABLE   AGE    CONTAINERS   IMAGES                    SELECTOR
+app-canary   1/1     1            1           41s    caddy        caddy:2.4.5-alpine        app=web,version=canary
+app-new      10/10   10           10          119s   httpd        httpd:2.4.49-alpine3.14   app=web,version=new
+
+
+
+$ kubectl get svc -o wide
+
+NAME   TYPE           CLUSTER-IP       EXTERNAL-IP                                                              PORT(S)        AGE     SELECTOR
+app    LoadBalancer   10.102.203.232   a72ed778423d04c91a3f64693cf15663-269227996.us-west-2.elb.amazonaws.com   80:32566/TCP   4m31s   app=web
+
+
+
+- The Service will now automatically select the canary's Pod and serve a fraction of the traffic to it. In this case roughly 1 in 11 requests will be sent to the canary.
+
+- You could try refreshing your browser until you see the new Caddy page but due to caching issues, you will send requests from the command line next.
+
+
+
+16. Send traffic to the Service through the load balancer at a rate of one request per second until you see the Caddy works! response from the canary, then press ctrl+c: 
+
+service_address=$(kubectl get service app -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+while true; do
+    curl --silent $service_address | grep "works"
+    sleep 1
+done
+
+<html><body><h1>It works!</h1></body></html>
+<html><body><h1>It works!</h1></body></html>
+<html><body><h1>It works!</h1></body></html>
+<html><body><h1>It works!</h1></body></html>
+<html><body><h1>It works!</h1></body></html>
+<html><body><h1>It works!</h1></body></html>
+<html><body><h1>It works!</h1></body></html>
+<html><body><h1>It works!</h1></body></html>
+<html><body><h1>It works!</h1></body></html>
+                <title>Caddy works!</title>
+<html><body><h1>It works!</h1></body></html>
+<html><body><h1>It works!</h1></body></html>
+..
+..
+
+
+- You can now delete the canary Deployment and roll out the new version in-place in the app-new Deployment.
+
+
+
+17. Delete the canary Deployment and set the app-new deployment to use the Caddy image:
+
+
+$ kubectl delete deployment app-canary
+
+$ kubectl set image deployment app-new httpd=caddy:2.4.5-alpine
+
+
+access the same service LB: http://a72ed778423d04c91a3f64693cf15663-269227996.us-west-2.elb.amazonaws.com/
+
+Caddy
+Congratulations!
+
+
+
+
+
+
+
+
+========================================================================================
 
 Helm Introduction
-=========================================================================
+
+========================================================================================
 - applications we deploy into kubernetes cluster can become complex. a typical app is usually made up of collection of objects, that need to interconnect to make everything work.
 
 ex: a simple wordpress app may need object like below:
@@ -12079,6 +13649,7 @@ helm uninstall
 $ helm uninstall <installed_pck_release_name>
 
 ex: helm uninstall bravo
+
 release "bravo" uninstalled
 
  
@@ -12449,4 +14020,1365 @@ Performing a Kubernetes Deployment using ConfigMaps and Helm
 D:\work\learn\docker-kubernetes\Udemy-CKAD\lab\code\App\solution-code
 
 kubectl apply -f deployment.yaml
+
+
+
+
+----------------------------------------------------------------------------------------
+
+
+CKAD Practice
+*******************************************
+
+https://github.com/dgkanatsios/CKAD-exercises/blob/master/
+
+
+
+
+CKAD Practice Exam: Core Concepts
+==================================
+
+spec:
+  containers:
+  - args:
+    - /bin/sh
+    - -c
+    - echo compiler.ready && sleep 3600
+    image: busybox
+    imagePullPolicy: Always
+    name: compiler
+	
+	
+
+
+# Create a new Namespace named workers and then create a Pod within it using the following configuration: the Pod is named worker, the Pod uses the busybox image for its only container, the Pod has the labels company=acme, speed=fast, type=async, the Pod runs the command /bin/sh -c "echo working... && sleep 3600"
+kubectl create ns workers
+
+*** after -c, the args should be in double quotes (")
+
+$ kubectl run -n workers worker --image=busybox --restart=Never --labels="company=acme,speed=fast,type=async" --dry-run=client -o yaml  -- /bin/sh -c "echo working... && sleep 3600"
+
+
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    company: acme
+    speed: fast
+    type: async
+  name: worker
+  namespace: workers
+spec:
+  containers:
+  - args:
+    - /bin/sh
+    - -c
+    - echo working... && sleep 3600
+    image: busybox
+    name: worker
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Never
+status: {}
+
+
+# Use kubectl run command specifically with the --dry-run=client and -o yaml parameters - and then redirect the output to file
+kubectl run -n core-system borg1 --image=busybox --restart=Always --labels="platform=prod" --env system=borg -o yaml --dry-run=client -- /bin/sh -c "echo borg.running... && sleep 3600" > /home/ubuntu/pod.yaml
+
+
+$ kubectl run -n core-system borg1 --image=busybox --restart=Always --labels="platform=prod" --env="system=borg" --env="xdsdds=yasdd" --dry-run=client -o yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    platform: prod
+  name: borg1
+  namespace: core-system
+spec:
+  containers:
+  - env:
+    - name: system
+      value: borg
+    - name: xdsdds
+      value: yasdd
+    image: busybox
+    name: borg1
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+  
+
+$ kubectl explain pod.spec
+
+
+
+# Launch Pod and Configure it's Termination Shutdown Time
+
+$ kubectl run web-zeroshutdown -n sys2 --image=nginx --restart=Never --port=80 -o yaml --dry-run=client > pod-zeroshutdown.yaml
+
+- use kubectl explain pod.spec to check the syntax and how the terminationGracePeriodSeconds attribute should be configured
+kubectl explain pod.spec
+$ kubectl explain pod.spec
+
+- use vim and edit and update the pod-zeroshutdown.yaml file, adding in -> terminationGracePeriodSeconds: 0
+
+
+
+
+
+- Create a busybox pod (using kubectl command) that runs the command "env". Run it and see the output
+
+kubectl run busybox --image=busybox --command --restart=Never -it -- env # -it will help in seeing the output
+# or, just run it without -it
+kubectl run busybox --image=busybox --command --restart=Never -- env
+# and then, check its logs
+kubectl logs busybox
+
+
+
+- Get the YAML for a new ResourceQuota called 'myrq' with hard limits of 1 CPU, 1G memory and 2 pods without creating it
+
+$ kubectl create quota myrq --hard=cpu=1,memory=1G,pods=2 --dry-run=client -o yaml
+
+
+
+
+
+
+CKAD Practice Exam: Configuration
+==================================
+
+
+# Confirm the the pod contains 2 containers c1 and c2 and that they have been configured with the required security context
+kubectl exec -it -n dnn secpod -c c1 -- id
+uid=1000 gid=0(root) groups=3000
+kubectl exec -it -n dnn secpod -c c2 -- id
+uid=2000 gid=0(root) groups=3000
+
+
+
+# Create a new pod using the kubectl run command
+kubectl run web1 -n ca100 --image=nginx --requests='memory=100Mi' --limits='memory=200Mi' -l env=prod -l type=processor --port=80
+
+
+# Confirm that the pod has launched successfully with the ConfigMap managed env vars
+kubectl logs -n ca200 redfastcar 
+COLOUR=red
+SPEED=fast
+
+
+#Pod Security Context Configuration
+$ kubectl run -n dnn secpod --image=bash --dry-run=client -o yaml -- /usr/local/bin/bash -c "sleep 3600" > 3.yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: secpod
+  name: secpod
+  namespace: dnn
+spec:
+  securityContext:
+    fsGroup: 3000
+  containers:
+  - args:
+    - /usr/local/bin/bash
+    - -c
+    - sleep 3600
+    image: bash
+    name: c1
+    securityContext:
+      runAsUser: 1000
+  - args:
+    - /usr/local/bin/bash
+    - -c
+    - sleep 3600
+    image: bash
+    name: c2
+    securityContext:
+      runAsUser: 2000
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+  
+
+
+
+CKAD Practice Exam: Multi-Container Pods - Solution Guide
+==========================================================
+Check 1:  Pod with Legacy Logs Potential Solution
+
+# A Pod in the mcp namespace has a single container named random that writes its logs to the /var/log/random.log file. Add a second container named second that uses the busybox image to allow the following command to display the logs written to the random container's /var/log/random.log file: kubectl -n mcp logs random second
+
+# Start by saving the original Pod manifest so you don't lose any information
+kubectl -n mcp get pod random -o yaml > original.yaml
+
+# Create a copy for you to modify
+cp original.yaml second.yaml
+
+# Edit the file to be equivalent to the following 
+cat << EOF > second.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: random
+  namespace: mcp
+spec:
+  containers:
+  - args:
+    - /bin/sh
+    - -c
+    - while true; do shuf -i 0-1 -n 1 >> /var/log/random.log; sleep 1; done
+    image: busybox
+    name: random
+    volumeMounts:
+    - mountPath: /var/log
+      name: logs
+  - name: second
+    image: busybox
+    args: [/bin/sh, -c, 'tail -n+1 -f /var/log/random.log']
+    volumeMounts:
+    - name: logs
+      mountPath: /var/log
+  volumes:
+  - name: logs
+    emptyDir: {}
+EOF
+
+# Delete the original Pod
+kubectl delete -f second.yaml
+
+# Create the modified version
+kubectl create -f second.yaml
+
+
+
+
+
+Check 2:  Multi Container Pod Networking Potential Solution
+
+# Containers within the same Pod share the same Pod IP address, and can communicate via loopback network interface - therefore any of the following values can be used for the <REPLACE_HOST_HERE> placeholder
+* localhost
+* 127.0.0.1
+* webpod
+* <pod.assigned.ip.address>
+* <pod-assigned-ip-address>.<namespace>.pod.cluster.local
+# Update and deploy the provided manifest using localhost for <REPLACE_HOST_HERE>
+cat << EOF > kubectl apply -f -
+apiVersion: v1
+kind: Pod
+metadata:
+ name: webpod
+ namespace: app1
+spec:
+ restartPolicy: Never
+ volumes:
+ - name: vol1
+   emptyDir: {}
+ containers:
+ - name: c1
+   image: nginx
+   volumeMounts:
+   - name: vol1
+     mountPath: /usr/share/nginx/html
+   lifecycle:
+     postStart:
+       exec:
+         command:
+           - "bash"
+           - "-c"
+           - |
+             date | sha256sum | tr -d " *-" > /usr/share/nginx/html/index.html
+ - name: c2
+   image: appropriate/curl
+   command: ["/bin/sh", "-c", "curl -s http://localhost && sleep 3600"]
+EOF
+
+# Confirm that the pod is up and running
+kubectl get pod -n app1 webpod
+
+# Confirm that container c2 is correctly working (able to communicate with container c1)
+kubectl logs -n app1 webpod -c c2
+
+# Write out the log result for c2 to the /home/ubuntu/webpod-log.txt file
+kubectl logs -n app1 webpod -c c2 > /home/ubuntu/webpod-log.txt
+
+
+Commentary
+
+Containers within the same Pod share the same Pod IP address and can communicate with each other through the local loopback network interface. Therefore, container c2 can send HTTP network traffic to container c1 using any of the following host values:
+
+localhost
+127.0.0.1
+webpod (the pod's assigned name)
+<pod-assigned-ip-address> -  for example: 10.0.0.11
+<pod-assigned-ip-address>.<namespace>.pod.cluster.local - for example: 10-0-0-11.app1.pod.cluster.local, where 10.0.0.11 is the assigned Pod IP address.
+
+
+
+
+Check 3:  Add New Container with ReadOnly Volume
+
+# Update and save the provided Pod manifest /home/ubuntu/md5er-app.yaml with the extra c2 container as per given specs
+apiVersion: v1
+kind: Pod
+metadata:
+ name: md5er
+ namespace: app2
+spec:
+ restartPolicy: Never
+ volumes:
+ - name: vol1
+   emptyDir: {}
+ containers:
+ - name: c1
+   image: bash
+   env:
+   - name: DATA
+     valueFrom:
+       configMapKeyRef:
+         name: cm1
+         key: data
+   volumeMounts:
+   - name: vol1
+     mountPath: /data
+   command: ["/usr/local/bin/bash", "-c", "echo $DATA > /data/file.txt"]
+ - name: c2
+   image: bash
+   volumeMounts:
+   - name: vol1
+     mountPath: /data
+     readOnly: true
+   command:
+     - "/usr/local/bin/bash"
+     - "-c"
+     - |
+       for word in $(</data/file.txt)
+       do 
+       echo $word | md5sum | awk '{print $1}'
+       done
+	   
+# Apply the update Pod manifest into the K8s cluster
+kubectl apply -f/home/ubuntu/md5er-app.yaml
+
+# Check that the new c2 container is correctly generating MD5s
+kubectl logs -n app2 md5er c2
+
+# Save the stdout output from the c2 container as per given instructions
+kubectl logs -n app2 md5er c2 > /home/ubuntu/md5er-output.log
+
+
+
+$ kubectl describe cm -n app2 cm1
+
+Name: cm1
+Namespace: app2
+Labels: <none>
+Annotations: <none>
+Data
+====
+data:
+----
+no one has ever done anything like this
+Events: <none>
+
+
+
+
+
+CKAD Practice Exam: Observability
+===================================
+
+Check 1:  Potential Solution
+
+# Solution commands
+kubectl run nginx -n ca1 --image=nginx --restart=Never --port=80 --dry-run=client -o yaml > pod-livenessprobe.yaml
+# Edit and save the file using vim
+vim pod-livenessprobe.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+ creationTimestamp: null
+ labels:
+   run: nginx
+ name: nginx
+ namespace: ca1
+spec:
+ containers:
+ - image: nginx
+   name: nginx
+   ports:
+   - containerPort: 80
+     name: http-server
+   resources: {}
+   livenessProbe:
+     httpGet:
+       path: /
+       port: 80
+     initialDelaySeconds: 10
+     periodSeconds: 5 
+ dnsPolicy: ClusterFirst
+ restartPolicy: Never
+status: {}
+# Apply the manifest to create the Pod within the cluster
+kubectl apply -f pod-livenessprobe.yaml
+
+NOTE: *** using the container port name in liveness port did not work.
+
+livenessProbe:
+     httpGet:
+       path: /
+       port: http-server
+	   
+- *** should work like below:
+
+ports:
+- name: liveness-port
+  containerPort: 8080
+  hostPort: 8080
+
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: liveness-port
+	
+	
+
+
+Check 2:  trouble shoot and identify which service is not working and fix:
+
+- To start diagnosing the problem, list all the Services in the Namespace by entering:
+
+$ kubectl -n hosting get service -o wide
+
+- The output wide format includes the Service selectors which could be an issue if they don't match the labels on their respective Pods. Both Services are of type NodePort meaning you can send requests to any node in the cluster on the specified port (for example curl NodeIP:NodePort where the node IPs can be found with kubectl get nodes -o wide)
+
+$ curl http://ip-10-0-0-10.us-west-2.compute.internal:31005
+<!DOCTYPE html>
+<html>
+..
+..
+
+
+$ curl http://ip-10-0-0-10.us-west-2.compute.internal:30180
+curl: (7) Failed to connect to ip-10-0-0-10.us-west-2.compute.internal port 30180: Connection refused
+
+
+- Now To see if the Services have any Pod Endpoints associated with them enter:
+
+$ kubectl get endpoints -n hosting
+
+NAME   ENDPOINTS                               AGE
+web1   192.168.203.131:80,192.168.203.140:80   8m11s
+web2                                           8m11s
+
+
+- The web2 Service has no endpoints which means it cannot serve any requests though The selector for web2 is app=web2. List all of the corresponding Pods with:
+
+$ kubectl -n hosting get pods --selector app=web2
+
+
+- There are two Pods matching the selector so there isn't an issue with the labels. The naming convention of the Pods also suggests they. are part of a Deployment.
+
+- The problem is that. the Pods are not in the ready state. Describe the Pods to try to understand why:
+
+$ kubectl -n hosting describe pods --selector app=web2
+
+- The Events section explains that a Readiness probe failed. Recall that Services do not serve traffic to Pods that are not in the ready state. In the Containers section, the Readiness probe is summarized as follows:
+
+Warning  Unhealthy               4m5s (x95 over 8m47s)  kubelet            Readiness probe failed: Get "http://192.168.203.147:30/": dial tcp 192.168.203.147:30: connect: connection refused
+
+
+Readiness:      http-get http://:30/ delay=3s timeout=1s period=3s #success=1 #failure=3
+
+- The port the request is being sent to is 30, however, the port the container is listening on is 80 (shown a few lines above in the describe output). The ReadinessProbe needs to be changed to send the request to port 80 and the Pods should then reach the ready state.
+
+
+- In the exam, you should edit the Deployment using kubectl edit and change port: 30 to port: 80
+
+$ kubectl get deployments.apps -n hosting 
+NAME   READY   UP-TO-DATE   AVAILABLE   AGE
+web1   2/2     2            2           14m
+web2   2/2     2            2           14m
+
+$ kubectl get endpoints -n hosting
+NAME   ENDPOINTS                               AGE
+web1   192.168.203.131:80,192.168.203.140:80   14m
+web2   192.168.23.129:80,192.168.23.130:80     14m
+
+
+
+
+Check 3:  count logs line from group of pods i.e. use selector.
+
+- kubectl logs -n ca2 -l app=prod | wc -l > /home/ubuntu/combined-row-count-prod.txt
+
+
+
+
+Check 4:  *** extract a file from given pod to local directory:
+
+option-1
+$ kubectl exec -n ca2 skynet -- cat /skynet/t2-specs.txt > /home/ubuntu/t2-specs.txt
+
+option-2
+$ kubectl cp ca2/skynet:skynet/t2-specs.txt /home/ubuntu/t2-specs.txt
+
+
+
+
+
+
+
+CKAD Practice Exam: Pod Design
+================================
+
+
+
+
+Check 1: Create and Manage Deployments
+
+# Create a deployment named webapp in the zap namespace. Use the nginx:1.17.8 image and set the number of replicas initially to 2
+$ kubectl -n zap create deployment --image=nginx:1.17.8 --replicas=2 webapp
+
+# Next, scale the current deployment up from 2 to 4.
+$ kubectl -n zap scale deployment --replicas=4 webapp
+
+# Finally, update the deployment to use the newer nginx:1.19.0 image.
+kubectl -n zap set image deployment webapp nginx=nginx:1.19.0
+
+$ kubectl -n zap create deployment --image=nginx:1.17.8 --replicas=2 webapp --dry-run=client -o yaml > webapp.yaml
+
+
+
+Check 2: Create Pod Labels
+
+# Add an additional label app=cloudacademy to all pods currently running in the gzz namespace that have the label env=prod
+
+$ kubectl -n gzz label pods --selector env=prod app=cloudacademy
+
+
+
+Check 3: Rollback Deployment
+
+# The nginx container running within the cloudforce deployment in the fre namespace needs to be updated to use the nginx:1.19.0-perl image. Perform this deployment update and ensure that the command used to perform it is recorded in the tracked rollout history.
+
+$ kubectl -n fre set image deployment cloudforce nginx=nginx:1.19.0-perl --record
+
+
+- The nginx=nginx:1.19.0-perl option specifies the Pod container (nginx) being set to the given image (nginx:1.19.0-perl).
+
+- The --record option is required to store the command and make it available in the rollout history (view it with kubectl -n fre rollout history deployment cloudforce).
+
+
+
+
+
+Check 4: Configure Pod AutoScaling
+
+# A deployment named eclipse has been created in the xx1 namespace. This deployment currently consists of 2 replicas. Configure this deployment to autoscale based on CPU utilisation. The autoscaling should be set for a minimum of 2, maximum of 4, and CPU usage of 65%.
+
+$ kubectl -n xx1 autoscale deployment eclipse --min=2 --max=4 --cpu-percent=65 
+
+
+
+Check 5: Create CronJob 
+
+# Create a cronjob named matrix in the saas namespace. Use the radial/busyboxplus:curl image and set the schedule to */10 * * * *. The job should run the following command: curl www.google.com
+
+$ kubectl -n saas create cronjob --image=radial/busyboxplus:curl --schedule='*/10 * * * *' matrix -- curl www.google.com
+
+
+
+Check 6: Filter and Sort Pods
+
+# Get a list of all pod names running in the rep namespace which have their colour label set to either orange, red, or yellow. The returned pod name list should contain only the pod names and nothing else. The pods names should be ordered by the cluster IP address assigned to each pod. The resulting pod name list should be saved out to the file /home/ubuntu/pod001
+
+kubectl -n rep get pods --selector 'colour in (orange,red,yellow)' --sort-by=.status.podIP -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' > /home/ubuntu/pod001
+
+
+
+$ kubectl get po -n rep -l 'colour in (orange,red,yellow)' --sort-by={.status.podIP} -o jsonpath="{.items[*]['metadata.name','metadata.namespace']}"
+
+
+$ kubectl get po -n rep -l 'colour in (orange,red,yellow)' --sort-by={.status.podIP} -o jsonpath="{.items[*]['metadata.name']}"pod12 pod13 pod16 pod20 pod19 pod15 pod18 pod2 pod4 pod7 pod6 pod8 pod10
+
+$ kubectl get po -n rep -l 'colour in (orange,red,yellow)' --sort-by={.status.podIP} -o jsonpath="{.items[*]['metadata.name']}{'\n'}"
+pod12 pod13 pod16 pod20 pod19 pod15 pod18 pod2 pod4 pod7 pod6 pod8 pod10
+
+
+
+check 7: 
+Create a new deployment called nginx-deploy, with one single container called nginx, image nginx:1.16 and 4 replicas. The deployment should use RollingUpdate strategy with maxSurge=1, and maxUnavailable=2.
+Next upgrade the deployment to version 1.17.
+Finally, once all pods are updated, undo the update and go back to the previous version.
+
+$ kubectl create deployment nginx-deploy --image=nginx:1.16 --replicas=4 --dry-run=client -o yaml > nginx-deploy.yaml
+
+strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 2
+	  
+- So final manifest file for deployment called nginx-deploy should looks like below:-
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: nginx-deploy
+  name: nginx-deploy
+  namespace: default
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: nginx-deploy
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 2
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: nginx-deploy
+    spec:
+      containers:
+      - image: nginx:1.16
+        imagePullPolicy: IfNotPresent
+        name: nginx
+		
+kubectl set image deployment nginx-deploy nginx=nginx:1.17
+
+
+kubectl rollout undo deployment nginx-deploy
+
+
+
+
+check 8:
+Create a redis deployment with the following parameters:
+Name of the deployment should be redis using the redis:alpine image. It should have exactly 1 replica.
+The container should request for .2 CPU. It should use the label app=redis.
+It should mount exactly 2 volumes.
+
+
+a. An Empty directory volume called data at path /redis-master-data.
+b. A configmap volume called redis-config at path /redis-master.
+c. The container should expose the port 6379.
+The configmap has already been created.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: redis
+  name: redis
+spec:
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      volumes:
+      - name: data
+        emptyDir: {}
+      - name: config
+        configMap:
+          name: redis-config
+      containers:
+      - image: redis:alpine
+        name: redis
+        volumeMounts:
+        - mountPath: /redis-master-data
+          name: data
+        - mountPath: /redis-master
+          name: config
+        ports:
+        - containerPort: 6379
+        resources:
+          requests:
+            cpu: "0.2"
+
+
+
+check 9: 
+We have deployed a new pod called secure-pod and a service called secure-service. Incoming or Outgoing connections to this pod are not working.
+Troubleshoot why this is happening.
+
+Make sure that incoming connection from the pod webapp-color are successful.
+
+Important: Don't delete any current objects deployed.
+
+
+- check the connectivity from the webapp-color pod to the secure-pod:-
+
+root@controlplane:~$ kubectl exec -it webapp-color -- sh
+/opt # nc -v -z secure-service 80
+
+
+
+
+check 10:
+Create a pod called time-check in the dvl1987 namespace. This pod should run a container called time-check that uses the busybox image.
+Create a config map called time-config with the data TIME_FREQ=10 in the same namespace.
+The time-check container should run the command: while true; do date; sleep $TIME_FREQ;done and write the result to the location /opt/time/time-check.log.
+The path /opt/time on the pod should mount a volume that lasts the lifetime of this pod.
+
+$ kubectl create namespace dvl1987
+
+apiVersion: v1
+data:
+  TIME_FREQ: "10"
+kind: ConfigMap
+metadata:
+  name: time-config
+  namespace: dvl1987
+  
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: time-check
+  name: time-check
+  namespace: dvl1987
+spec:
+  volumes:
+  - name: log-volume
+    emptyDir: {}
+  containers:
+  - image: busybox
+    name: time-check
+    env:
+    - name: TIME_FREQ
+      valueFrom:
+		configMapKeyRef:
+		  name: time-config
+		  key: TIME_FREQ
+    volumeMounts:
+    - mountPath: /opt/time
+      name: log-volume
+    command:
+    - "/bin/sh"
+    - "-c"
+    - "while true; do date; sleep $TIME_FREQ;done > /opt/time/time-check.log"
+
+
+
+check11:
+Create a pod called my-busybox in the dev2406 namespace using the busybox image. The container should be called secret and should sleep for 3600 seconds.
+
+The container should mount a read-only secret volume called secret-volume at the path /etc/secret-volume. The secret being mounted has already been created for you and is called dotfile-secret.
+
+Make sure that the pod is scheduled on controlplane and no other node in the cluster.
+
+- create the initial manifest:
+$ kubectl run my-busybox --image=busybox --command sleep 3600 --dry-run -o yaml > busybox.yaml
+
+
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: my-busybox
+  name: my-busybox
+  namespace: dev2406
+spec:
+  volumes:
+  - name: secret-volume
+    secret:
+      secretName: dotfile-secret
+  nodeSelector:
+    kubernetes.io/hostname: controlplane
+  tolerations:
+  - key: "node-role.kubernetes.io/master"
+    operator: "Exists"
+    effect: "NoSchedule"
+  containers:
+  - command:
+    - sleep
+    args:
+    - "3600"
+    image: busybox
+    name: secret
+    volumeMounts:
+    - name: secret-volume
+      readOnly: true
+      mountPath: "/etc/secret-volume"
+	  
+
+
+---------
+
+
+Check 12:
+
+A pod called dev-pod-dind-878516 has been deployed in the default namespace. Inspect the logs for the container called log-x and redirect the warnings to /opt/dind-878516_logs.txt
+
+$ kubectl logs dev-pod-dind-878516 -c log-x | grep WARNING > /opt/dind-878516_logs.txt
+
+
+
+---------
+
+Check 13:
+Create a cronjob called dice that runs every one minute. Use the Pod template located at /root/throw-a-dice. The image throw-dice randomly returns a value between 1 and 6. The result of 6 is considered success and all others are failure.
+The job should be non-parallel and complete the task once. Use a backoffLimit of 25.
+If the task is not completed within 20 seconds the job should fail and pods should be terminated.
+
+
+You don't have to wait for the job completion. As long as the cronjob has been created as per the requirements.
+
+
+
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: dice
+spec:
+  schedule: "*/1 * * * *"
+  jobTemplate:
+    spec:
+      completions: 1
+      backoffLimit: 25
+      activeDeadlineSeconds: 20
+      template:
+        spec:
+          containers:
+          - name: dice
+            image: kodekloud/throw-dice
+          restartPolicy: Never
+
+
+
+
+- Get nginx pod's ip created in previous step, use a temp busybox image to wget its '/'
+
+kubectl get po -o wide # get the IP, will be something like '10.1.1.131'
+# create a temp busybox pod
+kubectl run busybox --image=busybox --rm -it --restart=Never -- wget -O- 10.1.1.131:80
+
+Alternatively you can also try a more advanced option:
+
+# Get IP of the nginx pod
+NGINX_IP=$(kubectl get pod nginx -o jsonpath='{.status.podIP}')
+# create a temp busybox pod
+kubectl run busybox --image=busybox --env="NGINX_IP=$NGINX_IP" --rm -it --restart=Never -- /bin/sh -c 'wget -O- $NGINX_IP:80'
+
+
+Connecting to 10.50.192.12:80 (10.50.192.12:80)
+writing to stdout
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+<style>
+html { color-scheme: light dark; }
+body { width: 35em; margin: 0 auto;
+font-family: Tahoma, Verdana, Arial, sans-serif; }
+</style>
+</head>
+<body>
+<h1>Welcome to nginx!</h1>
+<p>If you see this page, the nginx web server is successfully installed and
+working. Further configuration is required.</p>
+
+<p>For online documentation and support please refer to
+<a href="http://nginx.org/">nginx.org</a>.<br/>
+Commercial support is available at
+<a href="http://nginx.com/">nginx.com</a>.</p>
+
+<p><em>Thank you for using nginx.</em></p>
+</body>
+</html>
+-                    100% |********************************|   615  0:00:00 ETA
+written to stdout
+pod "busybox" deleted
+
+
+
+
+
+Or just in one line:
+
+kubectl run busybox --image=busybox --rm -it --restart=Never -- wget -O- $(kubectl get pod nginx -o jsonpath='{.status.podIP}:{.spec.containers[0].ports[0].containerPort}')
+
+
+
+
+- If pod crashed and restarted, get logs about the previous instance
+kubectl logs nginx -p
+# or
+kubectl logs nginx --previous
+
+
+
+- Create a busybox pod that echoes 'hello world' and then exits
+
+kubectl run busybox --image=busybox -it --restart=Never -- echo 'hello world'
+# or
+kubectl run busybox --image=busybox -it --restart=Never -- /bin/sh -c 'echo hello world'
+
+
+
+- Do the same, but have the pod deleted automatically when it's completed
+
+kubectl run busybox --image=busybox -it --rm --restart=Never -- /bin/sh -c 'echo hello world'
+kubectl get po # nowhere to be found :)
+
+
+
+
+- Create an nginx pod and set an env value as 'var1=val1'. Check the env value existence within the pod
+
+kubectl run nginx --image=nginx --restart=Never --env=var1=val1
+# then
+kubectl exec -it nginx -- env
+# or
+kubectl exec -it nginx -- sh -c 'echo $var1'
+# or
+kubectl describe po nginx | grep val1
+# or
+kubectl run nginx --restart=Never --image=nginx --env=var1=val1 -it --rm -- env
+
+
+
+
+- *** pass env. NOTE: --env="NGINX=$NGINX_IP" has to be double quotes, single quotes (--env='NGINX=$NGINX_IP') does not work.
+
+kubectl run busybox --image=busybox --restart=Never --rm -it --env="NGINX=$NGINX_IP" -- /bin/sh -c env
+
+
+- *** busybox run command, double quotes does not work. it has to be in single quotes
+
+kubectl run busybox --image=busybox --restart=Never --rm -it -- /bin/sh -c "echo hello" ---- WRONG
+
+kubectl run busybox --image=busybox --restart=Never --rm -it -- /bin/sh -c 'echo hello'
+kubectl run busybox --image=busybox --restart=Never --env="NGINX=$NGINX_IP" --rm -it -- /bin/sh -c 'echo $NGINX'
+kubectl --image=busybox --restart=Never --rm -it nginx -- /bin/sh -c 'env'
+
+
+- *** --rm should always be used with -it
+
+kubectl --image=busybox --restart=Never --rm nginx -- /bin/sh -c 'env'
+
+error: --rm should only be used for attached containers
+See 'kubectl run -h' for help and examples
+
+
+
+
+- Create a Pod with two containers, both with image busybox and command "echo hello; sleep 3600". Connect to the second container and run 'ls'
+
+kubectl run busybox --image=busybox --restart=Never -o yaml --dry-run=client -- /bin/sh -c 'echo hello;sleep 3600' > pod.yaml
+vi pod.yaml
+
+containers:
+  - args:
+    - /bin/sh
+    - -c
+    - echo hello;sleep 3600
+    image: busybox
+    imagePullPolicy: IfNotPresent
+    name: busybox
+    resources: {}
+  - args:
+    - /bin/sh
+    - -c
+    - echo hello;sleep 3600
+    image: busybox
+    name: busybox2
+	
+
+# or you can do the above with just an one-liner
+kubectl exec -it busybox -c busybox2 -- ls
+
+# you can do some cleanup
+kubectl delete po busybox
+
+
+
+
+- Create a pod with an nginx container exposed on port 80. Add a busybox init container which downloads a page using "wget -O /work-dir/index.html http://neverssl.com/online". Make a volume of type emptyDir and mount it in both containers. For the nginx container, mount it on "/usr/share/nginx/html" and for the initcontainer, mount it on "/work-dir". When done, get the IP of the created pod and create a busybox pod and run "wget -O- IP"
+
+
+kubectl run web --image=nginx --restart=Never --port=80 --dry-run=client -o yaml > pod-init.yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: box
+  name: box
+spec:
+  initContainers: 
+  - args: 
+    - /bin/sh 
+    - -c 
+    - wget -O /work-dir/index.html http://neverssl.com/online 
+    image: busybox 
+    name: box 
+    volumeMounts: 
+    - name: vol 
+      mountPath: /work-dir 
+  containers:
+  - image: nginx
+    name: nginx
+    ports:
+    - containerPort: 80
+    volumeMounts: 
+    - name: vol 
+      mountPath: /usr/share/nginx/html 
+  volumes: 
+  - name: vol 
+    emptyDir: {} 
+# Apply pod
+kubectl apply -f pod-init.yaml
+
+# Get IP
+kubectl get po -o wide
+
+# Execute wget
+kubectl run box-test --image=busybox --restart=Never -it --rm -- /bin/sh -c "wget -O- IP"
+
+# you can do some cleanup
+kubectl delete po box
+
+
+
+
+CKAD Practice Exam: Services & Networking
+==========================================
+Check 2: Expose Pod
+
+# Expose a Pod in the red Namespace with the following configuration: The Service name is cloudacademy, the Service port is 8080, the Target port is 80, the Service type is ClusterIP
+
+$ kubectl expose --help
+$ kubectl expose pod basic -n red --name=cloudacademy-svc --port=8080 --target-port=80 --type=ClusterIP
+
+
+
+Check 3: Expose Deployment
+
+# Expose a deployment as a NodePort based service using the following settings: The Service name is cloudforce-svc, the Service type is NodePort, the Service port is 80, and the NodePort is 32080
+
+$ kubectl expose deployment -n ca1 cloudforce --name=cloudforce-svc --port=80 --type=NodePort
+
+$ kubectl patch -n ca1 svc cloudforce-svc --patch '{"spec": {"ports": [{"port": 80, "nodePort": 32080}]}}'
+
+
+
+
+
+Check 4: Fix Networking Issue
+
+# Examine both the Deployment and Service, confirming that the Service selector uses the correct pod labels as specified in the Deployment
+kubectl describe deployments.apps -n skynet t2
+kubectl describe svc -n skynet t2-svc
+
+# Check the t2-svc Service Endpoints are correctly registered - note that no endpoints are currently registered
+kubectl get ep -n skynet t2-svc
+
+# Update the t2-svc Service selector to use the correct Deployment pod label (app=t2)
+kubectl edit svc -n skynet t2-svc
+
+# Check the t2-svc Service Endpoints are now correctly registered
+kubectl get ep -n skynet t2-svc
+
+# Curl the updated t2-svc Service and save the HTTP response
+kubectl run client -n skynet --image=appropriate/curl -it --rm --restart=Never -- curl http://t2-svc:8080 > /home/ubuntu/svc-output.txt
+
+
+
+- This first 2 commands both use the describe command to output the current configuration for both the Deployment and the Service. 
+- The Service selector labels should match the same labels declared and used within the Deployment
+
+kubectl describe deployments.apps -n skynet t2
+kubectl describe svc -n skynet t2-svc
+
+kubectl get ep -n skynet t2-svc
+
+
+
+- Check that the Endpoints are now correctly registered:
+
+$ kubectl get ep -n skynet t2-svc
+
+
+
+
+Check 5: Secure Pod Networking
+
+# Confirm that pod2 traffic sent to pod1 is as stated currently blocked
+pod1IP=$(kubectl get pods pod1 -n sec1 -o jsonpath='{.status.podIP}')
+kubectl -n sec1 exec -it pod2 -- ping $pod1IP
+
+# Examine the pod labels for pod1 (receiver) and pod2 (sender) 
+kubectl get pods -n sec1 --show-labels
+
+
+# Examine the existing NetworkPolicy
+kubectl -n sec1 describe netpol netpol1
+
+
+# Edit and update the NetworkPolicy with correct ingress pod selector label
+kubectl edit -n sec1 netpol netpol1
+
+# Confirm that pod2 can now send traffic to pod1
+pod1IP=$(kubectl get pods pod1 -n sec1 -o jsonpath='{.status.podIP}')
+
+$ kubectl exec -n sec1 -it pod2 -- ping $pod1_ip
+
+PING 192.168.23.129 (192.168.23.129): 56 data bytes
+64 bytes from 192.168.23.129: seq=0 ttl=63 time=0.089 ms
+64 bytes from 192.168.23.129: seq=1 ttl=63 time=0.072 ms
+64 bytes from 192.168.23.129: seq=2 ttl=63 time=0.076 ms
+
+
+
+
+CKAD Practice Exam: State Persistence
+======================================
+
+Check 1: PV, PVC,Pod
+
+# Create a PersistentVolume named pv in the qq3 Namespace. The PersistentVolume must be configured with the following settings: storageClassName: host, 2Gi of storage capacity, Allow a single Node read-write access, Use a hostPath of /mnt/data
+cat << EOF | kubectl -n qq3 apply -f -
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv
+spec:
+  storageClassName: host
+  capacity:
+    storage: 2Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data"
+EOF
+# The PersistentVolume must be claimed by a PersistentVolumeClaim named pvc. The PersistentVolume must request 1Gi of storage capacity.
+cat << EOF | kubectl -n qq3 apply -f -
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc
+spec:
+  storageClassName: host
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+EOF
+# Lastly, create a Pod named persist with one redis container. The Pod must use the pvc PersistentVolumeClaim to mount a volume at /data.
+cat << EOF | kubectl -n qq3 apply -f -
+apiVersion: v1
+kind: Pod
+metadata:
+  name: persist
+spec:
+  volumes:
+    - name: data
+      persistentVolumeClaim:
+        claimName: pvc
+  containers:
+    - name: persist
+      image: redis
+      volumeMounts:
+        - mountPath: "/data"
+          name: data
+EOF
+
+
+
+
+Check 2: volumeMounts
+
+# Update the provided manifest to include a new hostPath based volume name vol1 with hostPath set to /tmp/vol, then mount this volume into both the c1 and c2 containers using volumeMounts with mountPath set to /var/log/blah
+cat << EOF | kubectl apply -f -
+apiVersion: v1
+kind: Pod
+metadata:
+ labels:
+   env: prod
+ name: logger
+ namespace: blah
+spec:
+ containers:
+ - image: bash
+   name: c1
+   command: ["/usr/local/bin/bash", "-c"]
+   args:
+    - ifconfig > /var/log/blah/data;
+      sleep 3600;
+   volumeMounts:
+   - mountPath: /var/log/blah
+     name: vol1
+ - image: bash
+   name: c2
+   command: ["/usr/local/bin/bash", "-c"]
+   args:
+    - sleep 3600;
+   volumeMounts:
+   - mountPath: /var/log/blah
+     name: vol1
+ volumes:
+ - name: vol1
+   hostPath:
+     path: /tmp/vol
+EOF
+
+
+
+***
+$ cat pod.yaml | yq r - metadata
+
+$ cat pod.yaml | yq r - metadata.name
+
+
+$ cat pod.yaml | yq r - metadata.name | base64 -d
+
+$ kubectl exec webapp-color -it -- printenv
+
+$ kubectl exec webapp-color -it -- env
+
+securityContext:
+    runAsUser: root
+	
+
+- kubectl run to create deployment, need to pass the --replicas
+$ kubectl run my-webapp --image=nginx --replicas=2
+
+
+- *** remove cluster details
+$ kubectl get pod <pod_name> -o yaml --export > pod.yaml
+
+
+
+- *** multiline command in container:
+- name: c2
+   image: bash
+   volumeMounts:
+   - name: vol1
+     mountPath: /data
+     readOnly: true
+   command:
+     - "/usr/local/bin/bash"
+     - "-c"
+     - |
+       for word in $(</data/file.txt)
+       do 
+       echo $word | md5sum | awk '{print $1}'
+       done
+
+OR
+
+- name: c2
+   image: bash
+   command: ["/usr/local/bin/bash", "-c", "for word in $(</data/file.txt); do echo $word | md5sum | awk '{print $1}'; done"]
+
+
+
+- *** Get a list of all pod names running in the rep namespace which have their colour label set to either orange, red, or yellow. The returned pod name list should contain only the pod names and nothing else. The pods names should be ordered by the cluster IP address assigned to each pod.
+
+kubectl -n rep get po -l='colour in (orange,red,yellow)' --sort-by='{.status.podIP}' -o custom-columns=CONTAINER:.metadata.name --no-headers > /home/ubuntu/pod001
+
+
+
+- *** Check the annotations for pod nginx1
+
+kubectl annotate pod nginx1 --list
+
+
+
+- *** Create an nginx pod with requests cpu=100m,memory=256Mi and limits cpu=200m,memory=512Mi
+
+kubectl run nginx --image=nginx --restart=Never --requests='cpu=100m,memory=256Mi' --limits='cpu=200m,memory=512Mi'
+
+********************************************************************************************
+
+Launching Exam:
+At the time of your scheduled Exam reservation, login to My Portal and click on the Take Exam link. You may also use your Linux Foundation ID (LFID) to log into https://www.examslocal.com/linuxfoundation to start your exam.
+Go to “My Exams” and select the exam you wish to start.
+
+
+You may start your exam up to 15 minutes prior to your scheduled appointment time. You MUST start your exam no later than 15 minutes after your scheduled appointment time.
+Failing to start your exam within 15 minutes of your scheduled appointment time will result in the system marking you as a No-Show and you will not be able to take your exam.
+
+
+Reschedule or Cancel an Exam Reservation:
+If you need to cancel or reschedule your exam, you may do so yourself by logging into My Portal and selecting the “Cancel or Reschedule”option.
+You will not be able to make changes to the exam reservation when 24 hours or less remain before the start time of the exam.
+
+
+No-Show Policy:
+If you are a “No-Show” for your scheduled exam reservation, you forfeit the exam eligibility and registration fees (no refund), and you will not be eligible for a free retake.
+
+
+Refund Policy for Exam Registration Fees:
+You have up to three (3) business days following payment of exam registration fees to request a full refund on your exam registration fees.
+
+
+No refunds will be given for requests made within 24 hours of a scheduled exam reservation.
+If you have a pending exam reservation, you must cancel the reservation at least 24 hours prior to the scheduled start time.
+
+
+To request a refund of exam registration fees, contact certificationsupport@linuxfoundation.org and provide your LFID and the email address used to complete the purchase.
+
+
+==================
+
+Linux Foundation
+Certified Kubernetes Application Developer
+CKAD - English
+date
+3/13/2022
+time
+5:30 AM - 7:30 AM - India Standard Time
+
+
+
+Confirmation Code
+04A-FBC
+
+Candidate Id
+6166436071
+
+
+###################################
+
+alias k=kubectl                         # will already be pre-configured
+
+export do="--dry-run=client -o yaml"    # k get pod x $do
+
+export now="--force --grace-period 0"   # k delete pod x $now
+
+
+###################################
+
+
+
+============
+Doubts:
+1/
+kubectl run nginx --image=nginx --restart=Never --port=8081
+
+POD_IP=$(kubectl get po nginx -o jsonpath='{.status.podIP}')
+
+works: kubectl run busyboxtemp --image=busybox --restart=Never -it --rm -- wget $POD_IP:80
+
+not work: kubectl run busyboxtemp --image=busybox --restart=Never -it --rm -- wget $POD_IP:8081
+
+
+
 

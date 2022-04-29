@@ -2178,7 +2178,9 @@ local     2a5c5d2150a7acd87f0948aecd1eb86cefdb70c16941f81f2122b344b0b5817b
 local     c3b72204a79f3cdc01aa5a449b6f0c1e7720376b6d74a51bff13f3466c8394a8
 
 - we can see the old wordpress:4.9.0 is still there. use 'docker image prune -a' command to any images that are left over.
-D:\work\learn\docker-kubernetes\docker-compose\docker-compose-training-master\webapp>docker image ls
+
+docker image ls
+
 REPOSITORY          TAG       IMAGE ID       CREATED        SIZE
 docker101tutorial   latest    d660cefd81ed   3 weeks ago    28.2MB
 alpine/git          latest    b8f176fa3f0d   3 months ago   25.1MB
@@ -3105,6 +3107,8 @@ Commands:
   update      Update a service
 
 Run 'docker service COMMAND --help' for more information on a command.
+
+
 
 
 
